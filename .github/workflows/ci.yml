@@ -53,17 +53,22 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: Build JAR
-        run: mvn -B clean package -DskipTests
+        run: |
+          cd UserService
+          mvn -B clean package -DskipTests
       - name: Set Image Tag
         id: tag
         run: |
           echo "tag=$( [ '${{ github.event_name }}' = 'pull_request' ] && echo 'pr-${{ github.event.pull_request.number }}' || echo 'latest' )-${{ github.sha }}" >> $GITHUB_OUTPUT
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service:${{ steps.tag.outputs.tag }} .
+        run: |
+          cd UserService
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/userservice:${{ steps.tag.outputs.tag }} .
       - name: Save & Upload Docker (PR only)
         if: github.event_name == 'pull_request'
         run: |
-          docker save ${{ secrets.DOCKER_USERNAME }}/user-service:${{ steps.tag.outputs.tag }} -o image.tar
+          cd UserService
+          docker save ${{ secrets.DOCKER_USERNAME }}/userservice:${{ steps.tag.outputs.tag }} -o image.tar
           echo "name=docker-image-pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
         id: artifact
       - name: Upload Docker Artifact
@@ -71,13 +76,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.artifact.outputs.name }}
-          path: image.tar
+          path: UserService/image.tar
       - name: Login to Docker Hub
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
       - name: Push Docker Image
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest-${{ github.sha }}
-          docker tag ${{ secrets.DOCKER_USERNAME }}/user-service:latest-${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/user-service:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          cd UserService
+          docker push ${{ secrets.DOCKER_USERNAME }}/userservice:latest-${{ github.sha }}
+          docker tag ${{ secrets.DOCKER_USERNAME }}/userservice:latest-${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/user-service:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/userservice:latest
