@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="create-table-cardinfo" author="anna">
+        <createTable tableName="card_info">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="cardinfo_user_id_users_id" references="users(id)"/>
+            </column>
+            <column name="number" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="holder" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expiration_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-indexes-table-cardinfo" author="anna">
+        <createIndex tableName="card_info" indexName="idx_card_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex tableName="card_info" indexName="idx_card_number">
+            <column name="number"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="add-unique-constraint-card-number" author="anna">
+        <addUniqueConstraint
+                columnNames="number"
+                constraintName="uk_card_number"
+                tableName="card_info"/>
+    </changeSet>
+
+
+</databaseChangeLog>
