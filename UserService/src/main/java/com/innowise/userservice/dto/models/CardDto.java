@@ -2,10 +2,7 @@ package com.innowise.userservice.dto.models;
 
 import com.innowise.userservice.entities.UserEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.FutureOrPresent;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 
@@ -27,11 +24,11 @@ public class CardDto {
     @Size(max = 100)
     private String holder;
 
-    @NonNull
+    @NotNull
     @FutureOrPresent
     private LocalDate expirationDate;
 
-    @NonNull
+    @NotNull
     private Long userId;
 
 }

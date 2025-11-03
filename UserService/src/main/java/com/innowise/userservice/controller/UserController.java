@@ -13,7 +13,7 @@ import org.springframework.data.domain.Page;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -32,8 +32,8 @@ public class UserController {
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
     }
 
-    @GetMapping("/email/{email}")
-    public ResponseEntity<UserDto> getByEmail(@PathVariable String email) {
+    @GetMapping(params = "email")
+    public ResponseEntity<UserDto> getByEmail(@RequestParam String email){
         Optional<UserDto> user = userService.getByEmail(email);
         return user.map(ResponseEntity::ok)
                 .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
