@@ -6,7 +6,6 @@ import com.innowise.userservice.entities.UserEntity;
 import com.innowise.userservice.exceptions.DuplicateException;
 import com.innowise.userservice.exceptions.NotFoundException;
 import com.innowise.userservice.service.interfaces.UserService;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,6 @@ import java.util.Optional;
 
 @SpringBootTest
 @Testcontainers
-@Transactional
 @TestPropertySource(properties = {
         "spring.cache.type=none",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
@@ -51,41 +49,53 @@ public class UserServiceIntegrationTest {
     @Autowired
     private UserDao userDao;
 
-    private UserDto testUser;
+    private  UserDto testUser;
 
+    @BeforeEach
+    void cleanDatabase() {
+        userDao.getAll(PageRequest.of(0, 10))
+                .forEach(user -> userDao.delete(user.getId()));
+    }
     @BeforeEach
     void setUp() {
         testUser = new UserDto();
-        testUser.setName("Ada");
-        testUser.setSurname("Wong");
+        testUser.setName("testUserName");
+        testUser.setSurname("testUserSurname");
         testUser.setBirthdate(LocalDate.of(1990, 1, 1));
-        testUser.setEmail("ada@example.com");
+        testUser.setEmail("testmail@example.com");
+
     }
 
     @Test
     void testCreate() {
         UserDto created = userService.create(testUser);
         Assertions.assertNotNull(created.getId());
-        Assertions.assertEquals("ada@example.com", created.getEmail());
+        Assertions.assertEquals(testUser.getEmail(), created.getEmail());
     }
 
     @Test
     void testCreateDuplicateEmailException() {
         userService.create(testUser);
 
+        UserDto duplicateUser = new UserDto();
+        duplicateUser.setName("testUserName2");
+        duplicateUser.setSurname("testUserSurname2");
+        duplicateUser.setBirthdate(LocalDate.of(1991, 1, 1));
+        duplicateUser.setEmail("testmail@example.com");
+
         DuplicateException exception = Assertions.assertThrows(
                 DuplicateException.class,
-                () -> userService.create(testUser)
+                () -> userService.create(duplicateUser)
         );
-        Assertions.assertTrue(exception.getMessage().contains("User with email 'ada@example.com' already exists"));
+        Assertions.assertTrue(exception.getMessage().contains("User with email '" + duplicateUser.getEmail() + "' already exists"));
     }
 
     @Test
     void testGetByEmail() {
         userService.create(testUser);
-        Optional<UserDto> found = userService.getByEmail("ada@example.com");
+        Optional<UserDto> found = userService.getByEmail(testUser.getEmail());
         Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals("Ada", found.get().getName());
+        Assertions.assertEquals("testUserName", found.get().getName());
     }
 
     @Test
@@ -99,10 +109,15 @@ public class UserServiceIntegrationTest {
     @Test
     void testUpdate() {
         UserDto created = userService.create(testUser);
-        created.setName("ada");
+        
+        UserDto updateUser = new UserDto();
+        updateUser.setName("testUserNameUpdt");
+        updateUser.setSurname("testUserSurnameUpdt");
+        updateUser.setBirthdate(LocalDate.of(1990, 1, 1));
+        updateUser.setEmail(testUser.getEmail());
 
-        UserDto updated = userService.update(created.getId(), created);
-        Assertions.assertEquals("ada", updated.getName());
+        UserDto updated = userService.update(created.getId(), updateUser);
+        Assertions.assertEquals("testUserNameUpdt", updated.getName());
     }
 
     @Test

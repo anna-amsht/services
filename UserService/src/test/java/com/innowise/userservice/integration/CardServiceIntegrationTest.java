@@ -27,10 +27,10 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 @SpringBootTest
 @Testcontainers
-@Transactional
 @TestPropertySource(properties = {
         "spring.cache.type=none",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
@@ -63,19 +63,24 @@ public class CardServiceIntegrationTest {
     private Long userId;
 
     @BeforeEach
+    void cleanDatabase() {
+        userDao.getAll(PageRequest.of(0, 10))
+                .forEach(user -> userDao.delete(user.getId()));
+    }
+    @BeforeEach
     void setUp() {
         testUser = new UserDto();
-        testUser.setName("Ada");
-        testUser.setSurname("Wong");
+        testUser.setName("testUserName");
+        testUser.setSurname("testUserSurname");
         testUser.setBirthdate(LocalDate.of(1990, 1, 1));
-        testUser.setEmail("ada.wong@example.com");
+        testUser.setEmail("testmail@example.com");
 
         UserDto createdUser = userService.create(testUser);
         userId = createdUser.getId();
 
         testCard = new CardDto();
         testCard.setNumber("1234-5678-9012-3456");
-        testCard.setHolder("Ada Wong");
+        testCard.setHolder("testUserName testUserSurname");
         testCard.setExpirationDate(LocalDate.now().plusYears(1));
         testCard.setUserId(userId);
     }
@@ -84,17 +89,22 @@ public class CardServiceIntegrationTest {
     void testCreate() {
         CardDto created = cardService.create(testCard);
         Assertions.assertNotNull(created.getId());
-        Assertions.assertEquals("1234-5678-9012-3456", created.getNumber());
+        Assertions.assertEquals(testCard.getNumber(), created.getNumber());
         Assertions.assertEquals(userId, created.getUserId());
     }
 
     @Test
     void testCreateDuplicateNumberException() {
-        cardService.create(testCard);
+        CardDto created = cardService.create(testCard);
+        CardDto duplicateCard = new CardDto();
+        duplicateCard.setNumber("1234-5678-9012-3456");
+        duplicateCard.setHolder("testUserName testUserSurname");
+        duplicateCard.setExpirationDate(LocalDate.now().plusYears(1));
+        duplicateCard.setUserId(userId);
 
         DuplicateException exception = Assertions.assertThrows(
                 DuplicateException.class,
-                () -> cardService.create(testCard)
+                () -> cardService.create(duplicateCard)
         );
         Assertions.assertTrue(exception.getMessage().contains("Card with this number already exists"));
     }
@@ -104,7 +114,7 @@ public class CardServiceIntegrationTest {
         CardDto created = cardService.create(testCard);
         Optional<CardDto> found = cardService.getById(created.getId());
         Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals("1234-5678-9012-3456", found.get().getNumber());
+        Assertions.assertEquals(testCard.getNumber(), found.get().getNumber());
     }
 
     @Test
@@ -119,19 +129,22 @@ public class CardServiceIntegrationTest {
     void testUpdate() {
         CardDto created = cardService.create(testCard);
 
-        testCard.setNumber("9876-5432-1098-7654");
-        testCard.setHolder("Jill Valentine");
-        testCard.setExpirationDate(LocalDate.now().plusYears(2));
+        CardDto updateCard = new CardDto();
+        updateCard.setNumber("9876-5432-1098-7654");
+        updateCard.setHolder("testUserNameUpdt testUserSurnameUpdt");
+        updateCard.setExpirationDate(LocalDate.now().plusYears(2));
+        updateCard.setUserId(userId);
 
-        CardDto updated = cardService.update(created.getId(), testCard);
-        Assertions.assertEquals("9876-5432-1098-7654", updated.getNumber());
-        Assertions.assertEquals("Jill Valentine", updated.getHolder());
+        CardDto updated = cardService.update(created.getId(), updateCard);
+        Assertions.assertEquals(updateCard.getNumber(), updated.getNumber());
+        Assertions.assertEquals("testUserNameUpdt testUserSurnameUpdt", updated.getHolder());
         Assertions.assertEquals(LocalDate.now().plusYears(2), updated.getExpirationDate());
         Assertions.assertEquals(userId, updated.getUserId());
     }
 
     @Test
     void testDelete() {
+
         CardDto created = cardService.create(testCard);
         Long id = created.getId();
 
