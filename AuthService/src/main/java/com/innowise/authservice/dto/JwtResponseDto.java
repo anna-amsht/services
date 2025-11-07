@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@AllArgsConstructor
 @NoArgsConstructor
 public class JwtResponseDto {
     private String accessToken;
@@ -12,17 +13,9 @@ public class JwtResponseDto {
     private String tokenType = "Bearer";
     private Long id;
     private String email;
-    
+
     public JwtResponseDto(String accessToken, String refreshToken) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
-    }
-    
-    public JwtResponseDto(String accessToken, String refreshToken, String tokenType, Long id, String email) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.tokenType = tokenType;
-        this.id = id;
-        this.email = email;
     }
 }

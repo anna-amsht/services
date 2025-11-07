@@ -1,0 +1,33 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: AuthService
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://postgres-auth:5432/auth_user_info
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  liquibase:
+    change-log: classpath:db/changelog/changelog-master.xml
+    enabled: true
+  security:
+    debug: true
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.innowise.authservice: DEBUG
+
+jwt:
+  secret: ${JWT_SECRET:Yn2kj3n4f8903nf823nf923nfd92n3f9dnf923ndf923ndf923ndf923ndf923ndf}
+  access:
+    token:
+      expiration: 3600000
+  refresh:
+    token:
+      expiration: 86400000
