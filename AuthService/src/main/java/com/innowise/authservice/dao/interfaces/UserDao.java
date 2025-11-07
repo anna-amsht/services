@@ -9,5 +9,5 @@ public interface UserDao {
     Optional<UserEntity> getByUsername(String username);
     Optional<UserEntity> getByEmail(String email);
     Optional<UserEntity> getByEmailWithRoles(String email);
-    void update(UserEntity userEntity);
+    boolean update(UserEntity userEntity); // Изменено на boolean
 }

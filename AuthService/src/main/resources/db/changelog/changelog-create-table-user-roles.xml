@@ -19,5 +19,4 @@
                              columnNames="user_id,role_id"
                              constraintName="uk_user_roles_unique"/>
     </changeSet>
-
 </databaseChangeLog>

@@ -59,7 +59,12 @@ public void create(UserEntity userEntity) {
     }
 
     @Override
-    public void update(UserEntity userEntity) {
-        entityManager.merge(userEntity);
+    public boolean update(UserEntity userEntity) { // Изменено на boolean
+        try {
+            entityManager.merge(userEntity);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

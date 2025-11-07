@@ -15,3 +15,19 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/changelog-master.xml
     enabled: true
+  security:
+    debug: true
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.innowise.authservice: DEBUG
+
+jwt:
+  secret: ${JWT_SECRET:Yn2kj3n4f8903nf823nf923nfd92n3f9dnf923ndf923ndf923ndf923ndf923ndf}
+  access:
+    token:
+      expiration: 3600000
+  refresh:
+    token:
+      expiration: 86400000
