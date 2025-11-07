@@ -22,18 +22,14 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "username", nullable = false)
     private String name;
-
-    @Column(name = "surname", nullable = false, unique = true)
-    private String surname;
-
-    @Column(name = "birth_date", nullable = false)
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private LocalDate birthdate;
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+    @Column(name = "password", nullable = false)
+    private String password;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
