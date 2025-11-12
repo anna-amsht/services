@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 
 import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -27,7 +28,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("#id == authentication.details.userId or hasRole('ADMIN')")
+    @PreAuthorize("#id == authentication.details['userId'] or hasRole('ADMIN')")
     public ResponseEntity<UserDto> getById(@PathVariable Long id) {
         Optional<UserDto> user = userService.getById(id);
         return user.map(ResponseEntity::ok)
@@ -50,14 +51,14 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("#id == authentication.details.userId or hasRole('ADMIN')")
+    @PreAuthorize("#id == authentication.details['userId'] or hasRole('ADMIN')")
     public ResponseEntity<UserDto> update(@PathVariable Long id,  @RequestBody UserDto userDto) {
         UserDto updated = userService.update(id, userDto);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("#id == authentication.details.userId or hasRole('ADMIN')")
+    @PreAuthorize("#id == authentication.details['userId'] or hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();

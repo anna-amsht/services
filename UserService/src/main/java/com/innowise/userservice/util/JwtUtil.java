@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -58,10 +57,9 @@ public class JwtUtil {
         return jwtParser.parseClaimsJws(token).getBody().getSubject();
     }
 
-    public UUID getUserIdFromJwtToken(String token) {
+    public Long getUserIdFromJwtToken(String token) {
         Claims claims = jwtParser.parseClaimsJws(token).getBody();
-        Integer userId = claims.get("userId", Integer.class);
-        return UUID.fromString(userId.toString());
+        return claims.get("userId", Long.class);
     }
 
     @SuppressWarnings("unchecked")
