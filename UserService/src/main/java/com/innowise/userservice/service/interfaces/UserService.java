@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface UserService {
     UserDto create(@Valid UserDto userDto);
+    UserDto createWithId(@Valid UserDto userDto);
     Optional<UserDto> getById(Long id);
     Optional<UserDto> getByEmail(String email);
     Page<UserDto> getAll(Pageable pageable);

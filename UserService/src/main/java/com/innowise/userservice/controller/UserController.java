@@ -4,6 +4,8 @@ import com.innowise.userservice.dto.models.UserDto;
 import com.innowise.userservice.exceptions.NotFoundException;
 import com.innowise.userservice.service.interfaces.UserService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +21,22 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserController {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+
     private final UserService userService;
 
-    @PostMapping
-    public ResponseEntity<UserDto> create(@RequestBody UserDto userDto) {
-        UserDto createdUser = userService.create(userDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+
+    @PostMapping("/with-id")
+    public ResponseEntity<UserDto> createWithId(@RequestBody UserDto userDto) {
+        logger.info("Creating user with predefined ID: {}", userDto.getId());
+        try {
+            UserDto createdUser = userService.createWithId(userDto);
+            logger.info("Successfully created user with ID: {}", userDto.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+        } catch (Exception e) {
+            logger.error("Error creating user with ID {}: {}", userDto.getId(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     @GetMapping("/{id}")

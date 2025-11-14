@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public interface UserDao {
     void create(UserEntity userEntity);
+    void createWithId(UserEntity userEntity);
     Optional<UserEntity> getById(Long id);
     Optional<UserEntity> getByEmail(String email);
     Page<UserEntity> getAll(Pageable pageable);

@@ -22,13 +22,13 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = true)
     private String name;
 
-    @Column(name = "surname", nullable = false)
+    @Column(name = "surname", nullable = true)
     private String surname;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "birth_date", nullable = true)
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthdate;
 

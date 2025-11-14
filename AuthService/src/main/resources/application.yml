@@ -31,3 +31,6 @@ jwt:
   refresh:
     token:
       expiration: 86400000
+
+internal:
+  token: ${INTERNAL_TOKEN:internal-secret-token}

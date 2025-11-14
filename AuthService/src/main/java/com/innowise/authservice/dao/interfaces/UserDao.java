@@ -10,4 +10,5 @@ public interface UserDao {
     Optional<UserEntity> getByEmail(String email);
     Optional<UserEntity> getByEmailWithRoles(String email);
     boolean update(UserEntity userEntity); // Изменено на boolean
+    void delete(Long id);
 }
