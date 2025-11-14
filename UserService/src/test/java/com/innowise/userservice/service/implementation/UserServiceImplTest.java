@@ -134,6 +134,7 @@ class UserServiceImplTest {
     void testUpdate() {
         when(userMapper.toEntity(userDto)).thenReturn(userEntity);
         when(userMapper.toDto(userEntity)).thenReturn(userDto);
+        when(userDao.getById(1L)).thenReturn(Optional.of(userEntity));
 
         UserDto result = userService.update(1L, userDto);
 
