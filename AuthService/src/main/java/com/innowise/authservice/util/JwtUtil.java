@@ -96,10 +96,9 @@ public class JwtUtil {
         return jwtParser.parseClaimsJws(token).getBody().getSubject();
     }
 
-    public UUID getUserIdFromJwtToken(String token) {
+    public Long getUserIdFromJwtToken(String token) {
         Claims claims = jwtParser.parseClaimsJws(token).getBody();
-        Integer userId = claims.get("userId", Integer.class);
-        return UUID.fromString(userId.toString());
+        return claims.get("userId", Long.class);
     }
 
     @SuppressWarnings("unchecked")

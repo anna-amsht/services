@@ -34,24 +34,6 @@ public class UserDaoImplementation implements UserDao {
     }
 
     @Override
-    public void createWithId(UserEntity userEntity) {
-        logger.debug("Creating user with predefined ID: {}", userEntity.getId());
-
-        entityManager.createNativeQuery(
-                "INSERT INTO users (id, name, surname, birth_date, email) VALUES (?, ?, ?, ?, ?)")
-                .setParameter(1, userEntity.getId())
-                .setParameter(2, userEntity.getName())
-                .setParameter(3, userEntity.getSurname())
-                .setParameter(4, userEntity.getBirthdate())
-                .setParameter(5, userEntity.getEmail())
-                .executeUpdate();
-        
-        entityManager.flush();
-        entityManager.clear();
-        logger.debug("Successfully created user with predefined ID: {}", userEntity.getId());
-    }
-
-    @Override
     public Optional<UserEntity> getById(Long id) {
         return Optional.ofNullable(entityManager.find(UserEntity.class, id));
     }

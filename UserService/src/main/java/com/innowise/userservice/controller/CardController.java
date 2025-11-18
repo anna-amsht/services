@@ -20,7 +20,7 @@ public class CardController {
     private final CardService cardService;
 
     @PostMapping
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("#cardDto.userId == authentication.details['userId'] or hasRole('ADMIN')")
     public ResponseEntity<CardDto> createCard(@RequestBody CardDto cardDto) {
         CardDto createdCard = cardService.create(cardDto);
         return ResponseEntity.ok(createdCard);

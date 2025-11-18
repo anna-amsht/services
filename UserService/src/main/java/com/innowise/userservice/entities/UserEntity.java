@@ -18,21 +18,21 @@ import java.util.List;
 @NoArgsConstructor
 @Table(name="users")
 public class UserEntity {
-    @Id()
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
     private Long id;
 
-    @Column(name = "name", nullable = true)
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "surname", nullable = true)
+    @Column(name = "surname", nullable = false)
     private String surname;
 
-    @Column(name = "birth_date", nullable = true)
+    @Column(name = "birth_date", nullable = false)
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthdate;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = true, unique = true)
     private String email;
 
     @OneToMany(

@@ -11,16 +11,16 @@
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="name" type="VARCHAR(100)">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="surname" type="VARCHAR(100)">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="birth_date" type="DATE">
-                <constraints nullable="true"/>
+                <constraints nullable="false"/>
             </column>
             <column name="email" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true"/>
+                <constraints nullable="true" unique="true"/>
             </column>
         </createTable>
     </changeSet>

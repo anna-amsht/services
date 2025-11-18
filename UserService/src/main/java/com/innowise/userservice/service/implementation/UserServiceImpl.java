@@ -44,22 +44,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDto createWithId(UserDto userDto) {
-        logger.info("Creating user with predefined ID: {}", userDto.getId());
+    public UserDto createFromCredentials(UserDto userDto) {
+        logger.info("Creating user with entity for email: {}", userDto.getEmail());
         if (userDao.getByEmail(userDto.getEmail()).isPresent()) {
             throw new DuplicateException("User with email '" + userDto.getEmail() + "' already exists");
         }
         UserEntity userEntity = userMapper.toEntity(userDto);
-        userDao.createWithId(userEntity);
-        // After creating with ID, we need to fetch the entity to ensure it's properly managed
-        Optional<UserEntity> createdEntity = userDao.getById(userEntity.getId());
-        if (createdEntity.isPresent()) {
-            logger.info("Successfully created user with predefined ID: {}", userDto.getId());
-            return userMapper.toDto(createdEntity.get());
-        } else {
-            logger.error("Failed to retrieve created user with ID: {}", userDto.getId());
-            throw new RuntimeException("Failed to create user with ID: " + userDto.getId());
-        }
+        userDao.create(userEntity);
+        logger.info("Successfully created user with ID: {}", userEntity.getId());
+        return userMapper.toDto(userEntity);
     }
 
     @Override
@@ -84,7 +77,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @CachePut(value = "users", key = "#id")
     public UserDto update(Long id, UserDto updatedUserDto) {
-        // Check if email is already taken by another user
         Optional<UserEntity> existingUser = userDao.getByEmail(updatedUserDto.getEmail());
         if (existingUser.isPresent() && !existingUser.get().getId().equals(id)) {
             throw new DuplicateException("User with email '" + updatedUserDto.getEmail() + "' already exists");
@@ -92,7 +84,6 @@ public class UserServiceImpl implements UserService {
 
         UserEntity updatedUserEntity = userMapper.toEntity(updatedUserDto);
         userDao.update(id, updatedUserEntity);
-        // Fetch the updated entity to ensure it's properly managed
         Optional<UserEntity> updatedEntity = userDao.getById(id);
         if (updatedEntity.isPresent()) {
             return userMapper.toDto(updatedEntity.get());

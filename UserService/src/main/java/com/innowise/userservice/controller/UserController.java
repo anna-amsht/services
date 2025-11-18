@@ -1,8 +1,12 @@
 package com.innowise.userservice.controller;
 
 import com.innowise.userservice.dto.models.UserDto;
+import com.innowise.userservice.dto.models.UserProfileCreateRequest;
+import com.innowise.userservice.exceptions.DuplicateException;
 import com.innowise.userservice.exceptions.NotFoundException;
 import com.innowise.userservice.service.interfaces.UserService;
+import com.innowise.userservice.util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,31 +15,65 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
 
 import java.util.Optional;
-import java.util.Map;
+import jakarta.validation.ConstraintViolationException;
 
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@Validated
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
+    @PostMapping
 
-    @PostMapping("/with-id")
-    public ResponseEntity<UserDto> createWithId(@RequestBody UserDto userDto) {
-        logger.info("Creating user with predefined ID: {}", userDto.getId());
+    public ResponseEntity<?> createUser(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody UserProfileCreateRequest request) {
+        
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body("Missing or invalid Authorization header");
+        }
+
+        String token = authHeader.substring(7);
+        
+        if (!jwtUtil.validateJwtToken(token)) {
+            return ResponseEntity.badRequest().body("Invalid JWT token");
+        }
+
+        String email = jwtUtil.getUserNameFromJwtToken(token);
+        Long userId = jwtUtil.getUserIdFromJwtToken(token);
+
+        logger.info("Creating user profile for email: {} with userId: {}", email, userId);
+
         try {
-            UserDto createdUser = userService.createWithId(userDto);
-            logger.info("Successfully created user with ID: {}", userDto.getId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+            UserDto userDto = new UserDto();
+            userDto.setId(userId);
+            userDto.setEmail(email);
+            userDto.setName(request.getName());
+            userDto.setSurname(request.getSurname());
+            userDto.setBirthdate(request.getBirthdate());
+
+            UserDto createdUser = userService.createFromCredentials(userDto);
+            logger.info("Successfully created user profile with ID: {}", createdUser.getId());
+
+            return ResponseEntity.ok(createdUser);
+        }  catch (DuplicateException e) {
+            logger.error("Duplicate user error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (ConstraintViolationException e) {
+            logger.error("Validation error creating user profile: {}", e.getMessage());
+            return ResponseEntity.badRequest().body("Validation failed: " + e.getMessage());
         } catch (Exception e) {
-            logger.error("Error creating user with ID {}: {}", userDto.getId(), e.getMessage(), e);
-            throw e;
+            logger.error("Error creating user profile: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("Failed to create user profile: " + e.getMessage());
         }
     }
 

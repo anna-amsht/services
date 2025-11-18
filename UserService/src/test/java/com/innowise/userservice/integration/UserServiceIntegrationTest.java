@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
@@ -25,18 +24,17 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.LocalDate;
 import java.util.Optional;
 
-
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(properties = {
         "spring.cache.type=none",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
-
 })
-@WithMockUser(roles = "USER")
 public class UserServiceIntegrationTest {
+
     @Container
-    private static final PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16"));
+    private static final PostgreSQLContainer<?> postgreSQLContainer =
+            new PostgreSQLContainer<>(DockerImageName.parse("postgres:16"));
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -51,85 +49,92 @@ public class UserServiceIntegrationTest {
     @Autowired
     private UserDao userDao;
 
-    private  UserDto testUser;
+    private UserDto testUser;
 
     @BeforeEach
     void cleanDatabase() {
-        userDao.getAll(PageRequest.of(0, 10))
+        userDao.getAll(PageRequest.of(0, 50))
                 .forEach(user -> userDao.delete(user.getId()));
     }
+
     @BeforeEach
     void setUp() {
         testUser = new UserDto();
-        testUser.setName("testUserName");
-        testUser.setSurname("testUserSurname");
+        testUser.setId(100L);
+        testUser.setEmail("jwtuser@example.com");
+        testUser.setName("John");
+        testUser.setSurname("Doe");
         testUser.setBirthdate(LocalDate.of(1990, 1, 1));
-        testUser.setEmail("testmail@example.com");
-
     }
 
     @Test
     void testCreate() {
-        UserDto created = userService.create(testUser);
+        UserDto created = userService.createFromCredentials(testUser);
         Assertions.assertNotNull(created.getId());
+        Assertions.assertEquals(testUser.getId(), created.getId());
         Assertions.assertEquals(testUser.getEmail(), created.getEmail());
+        Assertions.assertEquals(testUser.getName(), created.getName());
     }
 
     @Test
     void testCreateDuplicateEmailException() {
-        userService.create(testUser);
+        userService.createFromCredentials(testUser);
+        UserDto duplicate = new UserDto();
+        duplicate.setId(200L);
+        duplicate.setEmail(testUser.getEmail());
+        duplicate.setName("Another");
+        duplicate.setSurname("User");
+        duplicate.setBirthdate(LocalDate.of(1992, 1, 1));
 
-        UserDto duplicateUser = new UserDto();
-        duplicateUser.setName("testUserName2");
-        duplicateUser.setSurname("testUserSurname2");
-        duplicateUser.setBirthdate(LocalDate.of(1991, 1, 1));
-        duplicateUser.setEmail("testmail@example.com");
-
-        DuplicateException exception = Assertions.assertThrows(
+        DuplicateException ex = Assertions.assertThrows(
                 DuplicateException.class,
-                () -> userService.create(duplicateUser)
+                () -> userService.createFromCredentials(duplicate)
         );
-        Assertions.assertTrue(exception.getMessage().contains("User with email '" + duplicateUser.getEmail() + "' already exists"));
+
+        Assertions.assertTrue(ex.getMessage().contains(testUser.getEmail()));
     }
 
     @Test
     void testGetByEmail() {
-        userService.create(testUser);
+        userService.createFromCredentials(testUser);
+
         Optional<UserDto> found = userService.getByEmail(testUser.getEmail());
+
         Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals("testUserName", found.get().getName());
+        Assertions.assertEquals(testUser.getName(), found.get().getName());
     }
 
     @Test
     void testGetAll() {
-        userService.create(testUser);
+        userService.createFromCredentials(testUser);
+
         Page<UserDto> users = userService.getAll(PageRequest.of(0, 10));
-        Assertions.assertFalse(users.isEmpty());
+
         Assertions.assertEquals(1, users.getTotalElements());
     }
 
     @Test
     void testUpdate() {
-        UserDto created = userService.create(testUser);
-        
-        UserDto updateUser = new UserDto();
-        updateUser.setName("testUserNameUpdt");
-        updateUser.setSurname("testUserSurnameUpdt");
-        updateUser.setBirthdate(LocalDate.of(1990, 1, 1));
-        updateUser.setEmail(testUser.getEmail());
+        UserDto created = userService.createFromCredentials(testUser);
 
-        UserDto updated = userService.update(created.getId(), updateUser);
-        Assertions.assertEquals("testUserNameUpdt", updated.getName());
+        UserDto updatedDto = new UserDto();
+        updatedDto.setEmail(created.getEmail());
+        updatedDto.setName("Updated");
+        updatedDto.setSurname("User");
+        updatedDto.setBirthdate(created.getBirthdate());
+
+        UserDto updated = userService.update(created.getId(), updatedDto);
+
+        Assertions.assertEquals("Updated", updated.getName());
     }
 
     @Test
     void testDelete() {
-        UserDto created = userService.create(testUser);
-        Long id = created.getId();
+        UserDto created = userService.createFromCredentials(testUser);
 
-        userService.delete(id);
+        userService.delete(created.getId());
 
-        Optional<UserEntity> deleted = userDao.getById(id);
+        Optional<UserEntity> deleted = userDao.getById(created.getId());
         Assertions.assertTrue(deleted.isEmpty());
     }
 
@@ -141,5 +146,4 @@ public class UserServiceIntegrationTest {
         );
         Assertions.assertEquals("User not found", ex.getMessage());
     }
-
 }
