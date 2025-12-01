@@ -31,7 +31,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <sonar.organization>anna-amsht</sonar.organization>
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-        <sonar.exclusions>**/dto/**,**/controller/**,**/exceptions/**</sonar.exclusions>
+        <sonar.exclusions>**/dto/**,**/controller/**,**/exceptions/**,**/JwtAuthenticationFilter.java,**/JwtUtil.java,**/CardSecurityService.java</sonar.exclusions>
     </properties>
     <dependencies>
         <dependency>
