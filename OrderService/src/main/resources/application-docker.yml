@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: OrderService-Docker
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  liquibase:
+    change-log: classpath:db/changelog/changelog-master.xml
+    enabled: true
+
+logging:
+  level:
+    com.innowise.orderservice: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
