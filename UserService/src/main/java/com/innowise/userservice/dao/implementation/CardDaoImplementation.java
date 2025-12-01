@@ -19,7 +19,7 @@ import java.util.Optional;
 public class CardDaoImplementation implements CardDao {
     private final EntityManager entityManager;
     @Override
-    public void create(CardEntity cardEntity) {
+public void create(CardEntity cardEntity) {
         entityManager.persist(cardEntity);
     }
 

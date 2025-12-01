@@ -20,6 +20,9 @@ import com.innowise.authservice.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,17 +32,21 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
+    @Value("${internal.token:internal-secret-token}")
+    private String internalToken;
 
     private final AuthenticationManager authenticationManager;
     private final UserDetailsServiceImpl userDetailsService;
@@ -49,16 +56,18 @@ public class AuthController {
     private final RefreshTokenDao refreshTokenDao;
     private final RoleDao roleDao;
 
+
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequestDto registerRequest) {
         try {
             userDetailsService.loadUserByUsername(registerRequest.getEmail());
             throw new UserAlreadyExistsException("User with email " + registerRequest.getEmail() + " already exists");
         } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
-            System.out.println(e.getMessage());
+            logger.info("User with email {} does not exist, proceeding with registration", registerRequest.getEmail());
         }
 
         UserEntity user = new UserEntity();
+
         user.setUsername(registerRequest.getUsername());
         user.setEmail(registerRequest.getEmail());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
@@ -71,8 +80,27 @@ public class AuthController {
         }
 
         userDao.create(user);
+        logger.info("User created in AuthService with ID: {}", user.getId());
 
-        return ResponseEntity.ok("User registered successfully!");
+        // Generate JWT token
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+
+        RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity();
+        refreshTokenEntity.setUser(user);
+        refreshTokenEntity.setToken(refreshToken);
+        refreshTokenEntity.setExpiryDate(LocalDateTime.now().plusHours(24)); // 24 hours expiry
+        refreshTokenDao.save(refreshTokenEntity);
+
+        JwtResponseDto response = new JwtResponseDto(
+                accessToken,
+                refreshToken,
+                "Bearer",
+                user.getId(),
+                user.getEmail()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")

@@ -7,11 +7,14 @@ import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,10 +23,13 @@ import java.util.Optional;
 @Transactional
 public class UserDaoImplementation implements UserDao {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserDaoImplementation.class);
+
     private final EntityManager entityManager;
 
     @Override
     public void create(UserEntity userEntity) {
+        logger.debug("Creating user with auto-generated ID");
         entityManager.persist(userEntity);
     }
 
@@ -65,6 +71,7 @@ public class UserDaoImplementation implements UserDao {
             user.setSurname(updatedUser.getSurname());
             user.setBirthdate(updatedUser.getBirthdate());
             user.setEmail(updatedUser.getEmail());
+            entityManager.flush(); // Ensure changes are persisted
         }
     }
 

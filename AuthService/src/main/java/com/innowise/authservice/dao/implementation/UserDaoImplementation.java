@@ -6,6 +6,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -15,11 +17,15 @@ import java.util.Optional;
 @Transactional
 public class UserDaoImplementation implements UserDao {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserDaoImplementation.class);
+
     private final EntityManager entityManager;
 
     @Override
-public void create(UserEntity userEntity) {
+    public void create(UserEntity userEntity) {
+        logger.debug("Creating user in AuthService");
         entityManager.persist(userEntity);
+        logger.debug("Successfully created user in AuthService with ID: {}", userEntity.getId());
     }
 
     @Override
@@ -66,5 +72,12 @@ public void create(UserEntity userEntity) {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    @Override
+    public void delete(Long id) {
+        logger.debug("Deleting user with ID: {}", id);
+        getById(id).ifPresent(entityManager::remove);
+        logger.debug("Successfully deleted user with ID: {}", id);
     }
 }

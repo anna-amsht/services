@@ -9,6 +9,8 @@ import com.innowise.userservice.exceptions.NotFoundException;
 import com.innowise.userservice.service.interfaces.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,16 +26,32 @@ import java.util.Optional;
 @Validated
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+    
     private final UserDao userDao;
     private final UserMapper userMapper;
 
     @Override
     public UserDto create(UserDto userDto) {
+        logger.info("Creating user with auto-generated ID");
         if (userDao.getByEmail(userDto.getEmail()).isPresent()) {
             throw new DuplicateException("User with email '" + userDto.getEmail() + "' already exists");
         }
         UserEntity userEntity = userMapper.toEntity(userDto);
         userDao.create(userEntity);
+        logger.info("Successfully created user with auto-generated ID: {}", userEntity.getId());
+        return userMapper.toDto(userEntity);
+    }
+
+    @Override
+    public UserDto createFromCredentials(UserDto userDto) {
+        logger.info("Creating user with entity for email: {}", userDto.getEmail());
+        if (userDao.getByEmail(userDto.getEmail()).isPresent()) {
+            throw new DuplicateException("User with email '" + userDto.getEmail() + "' already exists");
+        }
+        UserEntity userEntity = userMapper.toEntity(userDto);
+        userDao.create(userEntity);
+        logger.info("Successfully created user with ID: {}", userEntity.getId());
         return userMapper.toDto(userEntity);
     }
 
@@ -59,10 +77,21 @@ public class UserServiceImpl implements UserService {
     @Override
     @CachePut(value = "users", key = "#id")
     public UserDto update(Long id, UserDto updatedUserDto) {
+        Optional<UserEntity> existingUser = userDao.getByEmail(updatedUserDto.getEmail());
+        if (existingUser.isPresent() && !existingUser.get().getId().equals(id)) {
+            throw new DuplicateException("User with email '" + updatedUserDto.getEmail() + "' already exists");
+        }
+
         UserEntity updatedUserEntity = userMapper.toEntity(updatedUserDto);
         userDao.update(id, updatedUserEntity);
-        return userMapper.toDto(updatedUserEntity);
+        Optional<UserEntity> updatedEntity = userDao.getById(id);
+        if (updatedEntity.isPresent()) {
+            return userMapper.toDto(updatedEntity.get());
+        } else {
+            throw new NotFoundException("User not found after update: " + id);
+        }
     }
+    
     @Override
     @CacheEvict(value = "users", key = "#id")
     public void delete(Long id) {
