@@ -18,8 +18,8 @@ import java.util.List;
 @NoArgsConstructor
 @Table(name="users")
 public class UserEntity {
-    @Id()
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
     private Long id;
 
     @Column(name = "name", nullable = false)
@@ -32,7 +32,7 @@ public class UserEntity {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthdate;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = true, unique = true)
     private String email;
 
     @OneToMany(

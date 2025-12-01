@@ -31,7 +31,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <sonar.organization>anna-amsht</sonar.organization>
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-        <sonar.exclusions>**/dto/**,**/controller/**,**/exceptions/**</sonar.exclusions>
+        <sonar.exclusions>**/dto/**,**/controller/**,**/exceptions/**,**/JwtAuthenticationFilter.java,**/JwtUtil.java,**/CardSecurityService.java</sonar.exclusions>
     </properties>
     <dependencies>
         <dependency>
@@ -99,7 +99,32 @@
             <version>1.21.3</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.11.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.11.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

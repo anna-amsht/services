@@ -14,16 +14,10 @@ import java.util.List;
 public class UserDto {
     private Long id;
 
-    @NotBlank
-    @Size(max = 100)
     private String name;
 
-    @NotBlank
-    @Size(max = 100)
     private String surname;
 
-    @NotNull
-    @Past
     private LocalDate birthdate;
 
     @NotBlank
