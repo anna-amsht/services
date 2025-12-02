@@ -1,6 +1,7 @@
 package com.innowise.orderservice.controller;
 
 import com.innowise.orderservice.dto.models.OrderDto;
+import com.innowise.orderservice.dto.models.OrderWithUserDto;
 import com.innowise.orderservice.exceptions.NotFoundException;
 import com.innowise.orderservice.service.interfaces.OrderService;
 import jakarta.validation.Valid;
@@ -24,39 +25,39 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<OrderDto> create(@Valid @RequestBody OrderDto orderDto) {
+    public ResponseEntity<OrderWithUserDto> create(@Valid @RequestBody OrderDto orderDto) {
         logger.info("Creating new order for userId: {}", orderDto.getUserId());
-        OrderDto createdOrder = orderService.create(orderDto);
-        logger.info("Successfully created order with ID: {}", createdOrder.getId());
+        OrderWithUserDto createdOrder = orderService.create(orderDto);
+        logger.info("Successfully created order with ID: {}", createdOrder.getOrder().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderDto> getById(@PathVariable Long id) {
+    public ResponseEntity<OrderWithUserDto> getById(@PathVariable Long id) {
         logger.debug("Getting order by id: {}", id);
-        Optional<OrderDto> order = orderService.getById(id);
+        Optional<OrderWithUserDto> order = orderService.getById(id);
         return order.map(ResponseEntity::ok)
                 .orElseThrow(() -> new NotFoundException("Order not found with id: " + id));
     }
 
     @GetMapping(params = "ids")
-    public ResponseEntity<List<OrderDto>> getByIds(@RequestParam List<Long> ids) {
+    public ResponseEntity<List<OrderWithUserDto>> getByIds(@RequestParam List<Long> ids) {
         logger.debug("Getting orders by ids: {}", ids);
-        List<OrderDto> orders = orderService.getByIds(ids);
+        List<OrderWithUserDto> orders = orderService.getByIds(ids);
         return ResponseEntity.ok(orders);
     }
 
     @GetMapping(params = "statuses")
-    public ResponseEntity<List<OrderDto>> getByStatuses(@RequestParam List<String> statuses) {
+    public ResponseEntity<List<OrderWithUserDto>> getByStatuses(@RequestParam List<String> statuses) {
         logger.debug("Getting orders by statuses: {}", statuses);
-        List<OrderDto> orders = orderService.getByStatuses(statuses);
+        List<OrderWithUserDto> orders = orderService.getByStatuses(statuses);
         return ResponseEntity.ok(orders);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrderDto> update(@PathVariable Long id, @Valid @RequestBody OrderDto orderDto) {
+    public ResponseEntity<OrderWithUserDto> update(@PathVariable Long id, @Valid @RequestBody OrderDto orderDto) {
         logger.info("Updating order with id: {}", id);
-        OrderDto updatedOrder = orderService.update(id, orderDto);
+        OrderWithUserDto updatedOrder = orderService.update(id, orderDto);
         logger.info("Successfully updated order with ID: {}", id);
         return ResponseEntity.ok(updatedOrder);
     }
