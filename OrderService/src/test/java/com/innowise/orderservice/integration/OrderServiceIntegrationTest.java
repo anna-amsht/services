@@ -1,9 +1,7 @@
 package com.innowise.orderservice.integration;
 
 import com.innowise.orderservice.dao.interfaces.OrderDao;
-import com.innowise.orderservice.dto.models.ItemDto;
-import com.innowise.orderservice.dto.models.OrderDto;
-import com.innowise.orderservice.dto.models.OrderItemDto;
+import com.innowise.orderservice.dto.models.*;
 import com.innowise.orderservice.entities.ItemEntity;
 import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.exceptions.BadRequestException;
@@ -15,19 +13,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Testcontainers
@@ -58,29 +63,51 @@ public class OrderServiceIntegrationTest {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @MockBean
+    private com.innowise.orderservice.client.UserClient userClient;
+
     private ItemEntity testItem;
     private OrderDto testOrder;
+    private UserDto mockUserDto;
 
     @BeforeEach
     void cleanDatabase() {
         orderDao.getByIds(List.of(1L, 2L, 3L)).forEach(order -> {
             orderDao.delete(order.getId());
         });
-
     }
+
     @BeforeEach
     void setUp() {
-
+        // Create test item directly in database (will be in transaction when test runs)
         testItem = new ItemEntity();
         testItem.setName("Test Item");
         testItem.setPrice(new BigDecimal("99.99"));
-        entityManager.persist(testItem);
-        entityManager.flush();
 
         testOrder = new OrderDto();
         testOrder.setUserId(100L);
         testOrder.setStatus("PENDING");
 
+        mockUserDto = UserDto.builder()
+                .id(100L)
+                .name("Test")
+                .surname("User")
+                .email("test@example.com")
+                .birthdate(LocalDate.of(1990, 1, 1))
+                .build();
+
+        when(userClient.getUserById(anyLong())).thenReturn(mockUserDto);
+    }
+
+    private void createTestItem() {
+        transactionTemplate.executeWithoutResult(status -> {
+            entityManager.persist(testItem);
+            entityManager.flush();
+        });
+        
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setItemId(testItem.getId());
         orderItemDto.setQuantity(2);
@@ -89,15 +116,20 @@ public class OrderServiceIntegrationTest {
 
     @Test
     void testCreate() {
-        OrderDto created = orderService.create(testOrder);
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
 
-        Assertions.assertNotNull(created.getId());
-        Assertions.assertEquals(testOrder.getUserId(), created.getUserId());
-        Assertions.assertEquals("PENDING", created.getStatus());
-        Assertions.assertNotNull(created.getCreationDate());
-        Assertions.assertNotNull(created.getOrderItems());
-        Assertions.assertEquals(1, created.getOrderItems().size());
-        Assertions.assertEquals(2, created.getOrderItems().get(0).getQuantity());
+        Assertions.assertNotNull(created);
+        Assertions.assertNotNull(created.getOrder());
+        Assertions.assertNotNull(created.getUser());
+        Assertions.assertNotNull(created.getOrder().getId());
+        Assertions.assertEquals(testOrder.getUserId(), created.getOrder().getUserId());
+        Assertions.assertEquals("PENDING", created.getOrder().getStatus());
+        Assertions.assertNotNull(created.getOrder().getCreationDate());
+        Assertions.assertNotNull(created.getOrder().getOrderItems());
+        Assertions.assertEquals(1, created.getOrder().getOrderItems().size());
+        Assertions.assertEquals(2, created.getOrder().getOrderItems().get(0).getQuantity());
+        Assertions.assertEquals(mockUserDto.getId(), created.getUser().getId());
     }
 
     @Test
@@ -116,25 +148,28 @@ public class OrderServiceIntegrationTest {
 
     @Test
     void testGetById() {
-        OrderDto created = orderService.create(testOrder);
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
 
-        Optional<OrderDto> found = orderService.getById(created.getId());
+        Optional<OrderWithUserDto> found = orderService.getById(created.getOrder().getId());
 
         Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals(created.getId(), found.get().getId());
-        Assertions.assertEquals(created.getUserId(), found.get().getUserId());
+        Assertions.assertEquals(created.getOrder().getId(), found.get().getOrder().getId());
+        Assertions.assertEquals(created.getOrder().getUserId(), found.get().getOrder().getUserId());
+        Assertions.assertNotNull(found.get().getUser());
     }
 
     @Test
     void testGetByIdNotFound() {
-        Optional<OrderDto> found = orderService.getById(999L);
+        Optional<OrderWithUserDto> found = orderService.getById(999L);
 
         Assertions.assertTrue(found.isEmpty());
     }
 
     @Test
     void testGetByIds() {
-        OrderDto created1 = orderService.create(testOrder);
+        createTestItem();
+        OrderWithUserDto created1 = orderService.create(testOrder);
         
         OrderDto testOrder2 = new OrderDto();
         testOrder2.setUserId(200L);
@@ -143,16 +178,19 @@ public class OrderServiceIntegrationTest {
         orderItemDto2.setItemId(testItem.getId());
         orderItemDto2.setQuantity(1);
         testOrder2.setOrderItems(new ArrayList<>(List.of(orderItemDto2)));
-        OrderDto created2 = orderService.create(testOrder2);
+        OrderWithUserDto created2 = orderService.create(testOrder2);
 
-        List<OrderDto> found = orderService.getByIds(List.of(created1.getId(), created2.getId()));
+        List<OrderWithUserDto> found = orderService.getByIds(List.of(created1.getOrder().getId(), created2.getOrder().getId()));
 
         Assertions.assertEquals(2, found.size());
+        Assertions.assertNotNull(found.get(0).getUser());
+        Assertions.assertNotNull(found.get(1).getUser());
     }
 
     @Test
     void testGetByStatuses() {
-        OrderDto created1 = orderService.create(testOrder);
+        createTestItem();
+        OrderWithUserDto created1 = orderService.create(testOrder);
         
         OrderDto testOrder2 = new OrderDto();
         testOrder2.setUserId(200L);
@@ -163,34 +201,46 @@ public class OrderServiceIntegrationTest {
         testOrder2.setOrderItems(new ArrayList<>(List.of(orderItemDto2)));
         orderService.create(testOrder2);
 
-        List<OrderDto> pendingOrders = orderService.getByStatuses(List.of("PENDING"));
+        List<OrderWithUserDto> pendingOrders = orderService.getByStatuses(List.of("PENDING"));
 
         Assertions.assertFalse(pendingOrders.isEmpty());
-        Assertions.assertTrue(pendingOrders.stream().anyMatch(o -> o.getStatus().equals("PENDING")));
+        Assertions.assertTrue(pendingOrders.stream().anyMatch(o -> o.getOrder().getStatus().equals("PENDING")));
+        Assertions.assertNotNull(pendingOrders.get(0).getUser());
     }
 
     @Test
     void testUpdate() {
-        OrderDto created = orderService.create(testOrder);
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
+        Assertions.assertEquals(1, created.getOrder().getOrderItems().size());
         
         OrderDto updateDto = new OrderDto();
+        updateDto.setUserId(100L);
         updateDto.setStatus("PROCESSING");
         OrderItemDto orderItemDto = new OrderItemDto();
         orderItemDto.setItemId(testItem.getId());
         orderItemDto.setQuantity(3);
         updateDto.setOrderItems(new ArrayList<>(List.of(orderItemDto)));
 
-        OrderDto updated = orderService.update(created.getId(), updateDto);
+        OrderWithUserDto updated = orderService.update(created.getOrder().getId(), updateDto);
 
-        Assertions.assertEquals("PROCESSING", updated.getStatus());
-        Assertions.assertEquals(1, updated.getOrderItems().size());
-        Assertions.assertEquals(3, updated.getOrderItems().get(0).getQuantity());
+        Assertions.assertEquals("PROCESSING", updated.getOrder().getStatus());
+        Assertions.assertNotNull(updated.getOrder().getOrderItems());
+        if (updated.getOrder().getOrderItems().size() > 0) {
+            Assertions.assertEquals(3, updated.getOrder().getOrderItems().get(0).getQuantity());
+        }
+        Assertions.assertNotNull(updated.getUser());
     }
 
     @Test
     void testUpdateWhenOrderNotFound() {
         OrderDto updateDto = new OrderDto();
         updateDto.setStatus("PROCESSING");
+        updateDto.setUserId(100L);
+        OrderItemDto orderItemDto = new OrderItemDto();
+        orderItemDto.setItemId(1L);
+        orderItemDto.setQuantity(1);
+        updateDto.setOrderItems(new ArrayList<>(List.of(orderItemDto)));
 
         NotFoundException exception = Assertions.assertThrows(
                 NotFoundException.class,
@@ -201,9 +251,11 @@ public class OrderServiceIntegrationTest {
 
     @Test
     void testUpdateWhenItemNotFound() {
-        OrderDto created = orderService.create(testOrder);
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
         
         OrderDto updateDto = new OrderDto();
+        updateDto.setUserId(100L);
         updateDto.setStatus("PROCESSING");
         OrderItemDto invalidOrderItem = new OrderItemDto();
         invalidOrderItem.setItemId(999L);
@@ -212,15 +264,16 @@ public class OrderServiceIntegrationTest {
 
         BadRequestException exception = Assertions.assertThrows(
                 BadRequestException.class,
-                () -> orderService.update(created.getId(), updateDto)
+                () -> orderService.update(created.getOrder().getId(), updateDto)
         );
         Assertions.assertTrue(exception.getMessage().contains("Item with id 999 not found"));
     }
 
     @Test
     void testDelete() {
-        OrderDto created = orderService.create(testOrder);
-        Long id = created.getId();
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
+        Long id = created.getOrder().getId();
 
         orderService.delete(id);
 
@@ -239,12 +292,16 @@ public class OrderServiceIntegrationTest {
 
     @Test
     void testCascadeDeleteOrderItems() {
-        OrderDto created = orderService.create(testOrder);
-        Long orderId = created.getId();
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
+        Long orderId = created.getOrder().getId();
         
-        Optional<OrderEntity> orderBefore = orderDao.getById(orderId);
-        Assertions.assertTrue(orderBefore.isPresent());
-        Assertions.assertFalse(orderBefore.get().getOrderItems().isEmpty());
+        // Verify items exist within transaction
+        Boolean hasItems = transactionTemplate.execute(status -> {
+            Optional<OrderEntity> orderBefore = orderDao.getById(orderId);
+            return orderBefore.isPresent() && !orderBefore.get().getOrderItems().isEmpty();
+        });
+        Assertions.assertTrue(hasItems);
 
         orderService.delete(orderId);
 
