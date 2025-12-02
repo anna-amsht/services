@@ -4,6 +4,8 @@ import com.innowise.orderservice.dao.interfaces.OrderDao;
 import com.innowise.orderservice.dto.mappers.OrderItemMapper;
 import com.innowise.orderservice.dto.mappers.OrderMapper;
 import com.innowise.orderservice.dto.models.OrderDto;
+import com.innowise.orderservice.dto.models.OrderWithUserDto;
+import com.innowise.orderservice.dto.models.UserDto;
 import com.innowise.orderservice.entities.ItemEntity;
 import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.entities.OrderItemEntity;
@@ -35,9 +37,10 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final EntityManager entityManager;
+    private final UserServiceClient userServiceClient;
 
     @Override
-    public OrderDto create(OrderDto orderDto) {
+    public OrderWithUserDto create(OrderDto orderDto) {
         logger.info("Creating order for userId: {}", orderDto.getUserId());
         
         OrderEntity orderEntity = orderMapper.toEntity(orderDto);
@@ -65,34 +68,61 @@ public class OrderServiceImpl implements OrderService {
         orderDao.create(orderEntity);
         logger.info("Successfully created order with ID: {}", orderEntity.getId());
         
-        return orderMapper.toDto(orderEntity);
+        OrderDto createdOrderDto = orderMapper.toDto(orderEntity);
+        UserDto userDto = userServiceClient.getUserById(orderDto.getUserId());
+        
+        return OrderWithUserDto.builder()
+                .order(createdOrderDto)
+                .user(userDto)
+                .build();
     }
 
     @Override
-    public Optional<OrderDto> getById(Long id) {
+    public Optional<OrderWithUserDto> getById(Long id) {
         logger.debug("Getting order by id: {}", id);
         return orderDao.getById(id)
-                .map(orderMapper::toDto);
+                .map(orderEntity -> {
+                    OrderDto orderDto = orderMapper.toDto(orderEntity);
+                    UserDto userDto = userServiceClient.getUserById(orderEntity.getUserId());
+                    return OrderWithUserDto.builder()
+                            .order(orderDto)
+                            .user(userDto)
+                            .build();
+                });
     }
 
     @Override
-    public List<OrderDto> getByIds(List<Long> ids) {
+    public List<OrderWithUserDto> getByIds(List<Long> ids) {
         logger.debug("Getting orders by ids: {}", ids);
         return orderDao.getByIds(ids).stream()
-                .map(orderMapper::toDto)
+                .map(orderEntity -> {
+                    OrderDto orderDto = orderMapper.toDto(orderEntity);
+                    UserDto userDto = userServiceClient.getUserById(orderEntity.getUserId());
+                    return OrderWithUserDto.builder()
+                            .order(orderDto)
+                            .user(userDto)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrderDto> getByStatuses(List<String> statuses) {
+    public List<OrderWithUserDto> getByStatuses(List<String> statuses) {
         logger.debug("Getting orders by statuses: {}", statuses);
         return orderDao.getByStatuses(statuses).stream()
-                .map(orderMapper::toDto)
+                .map(orderEntity -> {
+                    OrderDto orderDto = orderMapper.toDto(orderEntity);
+                    UserDto userDto = userServiceClient.getUserById(orderEntity.getUserId());
+                    return OrderWithUserDto.builder()
+                            .order(orderDto)
+                            .user(userDto)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
     @Override
-    public OrderDto update(Long id, OrderDto updatedOrderDto) {
+    public OrderWithUserDto update(Long id, OrderDto updatedOrderDto) {
         logger.info("Updating order with id: {}", id);
         
         OrderEntity existingOrder = orderDao.getById(id)
@@ -126,7 +156,13 @@ public class OrderServiceImpl implements OrderService {
         orderDao.update(id, existingOrder);
         logger.info("Successfully updated order with ID: {}", id);
         
-        return orderMapper.toDto(existingOrder);
+        OrderDto orderDto = orderMapper.toDto(existingOrder);
+        UserDto userDto = userServiceClient.getUserById(existingOrder.getUserId());
+        
+        return OrderWithUserDto.builder()
+                .order(orderDto)
+                .user(userDto)
+                .build();
     }
 
     @Override

@@ -1,17 +1,18 @@
 package com.innowise.orderservice.service.interfaces;
 
 import com.innowise.orderservice.dto.models.OrderDto;
+import com.innowise.orderservice.dto.models.OrderWithUserDto;
 import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface OrderService {
-    OrderDto create(@Valid OrderDto orderDto);
-    Optional<OrderDto> getById(Long id);
-    List<OrderDto> getByIds(List<Long> ids);
-    List<OrderDto> getByStatuses(List<String> statuses);
-    OrderDto update(Long id, @Valid OrderDto updatedOrderDto);
+    OrderWithUserDto create(@Valid OrderDto orderDto);
+    Optional<OrderWithUserDto> getById(Long id);
+    List<OrderWithUserDto> getByIds(List<Long> ids);
+    List<OrderWithUserDto> getByStatuses(List<String> statuses);
+    OrderWithUserDto update(Long id, @Valid OrderDto updatedOrderDto);
     void delete(Long id);
 }
 
