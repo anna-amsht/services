@@ -63,6 +63,36 @@ services:
     ports:
       - "8083:8083"
 
+  postgres-order:
+    image: postgres:16
+    container_name: order_postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: order_service
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-order:/var/lib/postgresql/data
+
+  order-service:
+    build:
+      context: ./OrderService
+      dockerfile: Dockerfile
+    container_name: order_service
+    depends_on:
+      - postgres-order
+      - user-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: order_service
+      USER_SERVICE_URL: http://user-service:8082
+    ports:
+      - "8084:8084"
+
 volumes:
   pgdata:
   pgdata-auth:
+  pgdata-order:
