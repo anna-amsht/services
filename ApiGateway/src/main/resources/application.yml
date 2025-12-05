@@ -50,6 +50,12 @@ jwt:
   secret: ${JWT_SECRET}
   issuer: AuthService
 
+services:
+  auth:
+    url: ${AUTH_SERVICE_URL:http://localhost:8083}
+  user:
+    url: ${USER_SERVICE_URL:http://localhost:8082}
+
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG

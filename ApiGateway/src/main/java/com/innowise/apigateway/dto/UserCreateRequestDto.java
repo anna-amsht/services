@@ -4,12 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserCreateRequestDto {
-    private Long userId;
-    private String email;
-    private String firstName;
-    private String lastName;
+    private String name;
+    private String surname;
+    private LocalDate birthdate;
 }
