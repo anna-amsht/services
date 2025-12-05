@@ -9,5 +9,6 @@ public interface RefreshTokenDao {
     Optional<RefreshTokenEntity> getByToken(String token);
     Optional<RefreshTokenEntity> getByUser(UserEntity user);
     void deleteByUser(UserEntity user);
+    void deleteByUserId(Long userId);
     void delete(RefreshTokenEntity refreshToken);
 }
