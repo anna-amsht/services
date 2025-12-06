@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8085
 
 spring:
   application:
@@ -10,21 +10,21 @@ spring:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/v1/auth/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=0
 
         - id: user-service
           uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/api/users/**
+            - Path=/api/v1/users/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=0
 
         - id: order-service
           uri: ${ORDER_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/orders/**
+            - Path=/api/v1/orders/**
           filters:
             - StripPrefix=1
 
@@ -58,7 +58,7 @@ services:
 
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway: TRACE
     org.springframework.security: DEBUG
     com.innowise.api_gateway: DEBUG
 

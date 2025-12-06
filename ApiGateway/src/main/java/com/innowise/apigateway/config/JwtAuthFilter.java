@@ -79,7 +79,8 @@ public class JwtAuthFilter implements WebFilter {
     }
     
     private boolean isPublicEndpoint(String path) {
-        return path.startsWith("/api/auth/login") ||
+        return path.startsWith("/api/v1/register") ||
+               path.startsWith("/api/auth/login") ||
                path.startsWith("/api/auth/register") ||
                path.startsWith("/api/auth/refresh");
     }

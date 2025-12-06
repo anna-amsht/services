@@ -24,7 +24,7 @@ public class SecurityConfig {
                 .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
+                        .pathMatchers("/api/v1/register", "/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh").permitAll()
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(jwtAuthFilter, SecurityWebFiltersOrder.HTTP_BASIC)

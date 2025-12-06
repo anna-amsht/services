@@ -10,8 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @RestController
-@RequestMapping("/register")
+@RequestMapping("/api/v1/register")
 @RequiredArgsConstructor
 @Slf4j
 public class RegistrationController {
@@ -19,14 +21,22 @@ public class RegistrationController {
     private final RegistrationService registrationService;
 
     @PostMapping
-    public Mono<ResponseEntity<RegistrationResponseDto>> register(@RequestBody RegisterRequestDto request) {
+    public Mono<ResponseEntity<?>> register(@RequestBody RegisterRequestDto request) {
         log.info("Registration request received for username: {}", request.getUsername());
         
         return registrationService.register(request)
-                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
+                .<ResponseEntity<?>>map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
                 .onErrorResume(error -> {
-                    log.error("Registration failed: {}", error.getMessage());
-                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+                    log.error("Registration error: {}", error.getMessage(), error);
+                    
+                    if (error.getMessage().contains("DUPLICATE_USER")) {
+                        String message = error.getMessage().substring(error.getMessage().indexOf(":") + 2);
+                        return Mono.just(ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Map.of("error", message)));
+                    }
+                    
+                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("error", "Registration failed")));
                 });
     }
 }

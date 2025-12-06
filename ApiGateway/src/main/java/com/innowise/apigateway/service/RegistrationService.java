@@ -4,6 +4,7 @@ import com.innowise.apigateway.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -29,9 +30,14 @@ public class RegistrationService {
         );
 
         return authServiceClient.post()
-                .uri("/auth/register")
+                .uri("/api/v1/auth/register")
                 .bodyValue(authRequest)
                 .retrieve()
+                .onStatus(status -> status.equals(HttpStatus.CONFLICT), response -> {
+                    return response.bodyToMono(String.class)
+                            .defaultIfEmpty("User already exists")
+                            .flatMap(body -> Mono.error(new RuntimeException("DUPLICATE_USER: " + body)));
+                })
                 .bodyToMono(AuthResponseDto.class)
                 .flatMap(authResponse -> {
                     log.info("Credentials created successfully for userId: {}", authResponse.getUserId());
@@ -47,6 +53,10 @@ public class RegistrationService {
                             .header("Authorization", "Bearer " + authResponse.getAccessToken())
                             .bodyValue(userRequest)
                             .retrieve()
+                            .onStatus(status -> !status.is2xxSuccessful(), response -> {
+                                return response.bodyToMono(String.class)
+                                        .flatMap(body -> Mono.error(new RuntimeException("UserService error: " + body)));
+                            })
                             .bodyToMono(Void.class)
                             .then(Mono.just(authResponse))
                             .onErrorResume(error -> {
@@ -72,7 +82,7 @@ public class RegistrationService {
         log.warn("Rolling back credentials for userId: {}", userId);
         
         return authServiceClient.delete()
-                .uri("/auth/users/{userId}", userId)
+                .uri("/api/v1/auth/users/{userId}", userId)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .doOnSuccess(v -> log.info("Rollback completed for userId: {}", userId))
