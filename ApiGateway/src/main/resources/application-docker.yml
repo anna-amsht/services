@@ -1,0 +1,72 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: API_Gateway
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL}
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+
+        - id: user-service
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=1
+
+        - id: order-service
+          uri: ${ORDER_SERVICE_URL}
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=1
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
+            maxAge: 3600
+
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: AuthService
+
+services:
+  auth:
+    url: ${AUTH_SERVICE_URL}
+  user:
+    url: ${USER_SERVICE_URL}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    com.innowise.apigateway: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

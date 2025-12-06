@@ -220,4 +220,19 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        logger.warn("Rollback initiated: deleting user credentials for userId: {}", userId);
+        
+        userDao.getById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+        
+        refreshTokenDao.deleteByUserId(userId);
+        
+        userDao.delete(userId);
+        
+        logger.info("Successfully deleted user credentials for userId: {}", userId);
+        return ResponseEntity.ok("User credentials deleted successfully");
+    }
 }
