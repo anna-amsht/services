@@ -1,24 +1,17 @@
-FROM openjdk:17-jdk-slim AS builder
-
-RUN apt-get update && \
-    apt-get install -y maven && \
-    rm -rf /var/lib/apt/lists/*
-
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
 WORKDIR /app
 
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
-
 COPY src ./src
 
 RUN mvn clean package -DskipTests
 
-FROM openjdk:17-jre-slim
-
+FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/target/ApiGateway-0.0.1-SNAPSHOT.jar api.jar
 
-EXPOSE 8080
+EXPOSE 8085
+ENV SPRING_PROFILES_ACTIVE=docker
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "api.jar"]
