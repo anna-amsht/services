@@ -13,7 +13,7 @@ public class RegisterRequestDto {
     private String username;
     private String password;
     private String email;
-    private String firstName;
-    private String lastName;
+    private String name;
+    private String surname;
     private LocalDate birthdate;
 }

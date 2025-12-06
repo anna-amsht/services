@@ -37,8 +37,8 @@ public class RegistrationService {
                     log.info("Credentials created successfully for userId: {}", authResponse.getUserId());
 
                     UserCreateRequestDto userRequest = new UserCreateRequestDto(
-                            request.getFirstName(),
-                            request.getLastName(),
+                            request.getName(),
+                            request.getSurname(),
                             request.getBirthdate()
                     );
 
