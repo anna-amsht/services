@@ -92,6 +92,24 @@ services:
     ports:
       - "8084:8084"
 
+  api-gateway:
+    build:
+      context: ./ApiGateway
+      dockerfile: Dockerfile
+    container_name: api_gateway
+    depends_on:
+      - auth-service
+      - user-service
+      - order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: http://auth-service:8083
+      USER_SERVICE_URL: http://user-service:8082
+      ORDER_SERVICE_URL: http://order-service:8084
+    ports:
+      - "8085:8085"
+
 volumes:
   pgdata:
   pgdata-auth:

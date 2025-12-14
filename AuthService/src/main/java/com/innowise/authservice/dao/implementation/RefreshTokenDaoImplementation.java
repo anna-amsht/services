@@ -64,6 +64,14 @@ public class RefreshTokenDaoImplementation implements RefreshTokenDao {
     }
 
     @Override
+    public void deleteByUserId(Long userId) {
+        entityManager.createQuery(
+                "DELETE FROM RefreshTokenEntity rt WHERE rt.user.id = :userId")
+                .setParameter("userId", userId)
+                .executeUpdate();
+    }
+
+    @Override
     public void delete(RefreshTokenEntity refreshToken) {
         if (entityManager.contains(refreshToken)) {
             entityManager.remove(refreshToken);
