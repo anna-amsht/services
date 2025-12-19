@@ -13,6 +13,7 @@ public interface OrderService {
     List<OrderWithUserDto> getByIds(List<Long> ids);
     List<OrderWithUserDto> getByStatuses(List<String> statuses);
     OrderWithUserDto update(Long id, @Valid OrderDto updatedOrderDto);
+    void updateOrderStatus(Long orderId, String status);
     void delete(Long id);
 }
 

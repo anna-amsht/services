@@ -166,6 +166,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public void updateOrderStatus(Long orderId, String status) {
+        logger.info("Updating order status for orderId: {} to status: {}", orderId, status);
+        
+        OrderEntity orderEntity = orderDao.getById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found with id: " + orderId));
+        
+        orderEntity.setStatus(status);
+        orderDao.update(orderId, orderEntity);
+        
+        logger.info("Successfully updated order status for orderId: {}", orderId);
+    }
+
+    @Override
     public void delete(Long id) {
         logger.info("Deleting order with id: {}", id);
         if (orderDao.getById(id).isEmpty()) {
