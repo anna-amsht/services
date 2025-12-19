@@ -3,6 +3,7 @@ package com.innowise.orderservice.service.implementation;
 import com.innowise.orderservice.dao.interfaces.OrderDao;
 import com.innowise.orderservice.dto.mappers.OrderItemMapper;
 import com.innowise.orderservice.dto.mappers.OrderMapper;
+import com.innowise.orderservice.dto.models.CreateOrderEventDto;
 import com.innowise.orderservice.dto.models.OrderDto;
 import com.innowise.orderservice.dto.models.OrderWithUserDto;
 import com.innowise.orderservice.dto.models.UserDto;
@@ -11,6 +12,7 @@ import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.entities.OrderItemEntity;
 import com.innowise.orderservice.exceptions.BadRequestException;
 import com.innowise.orderservice.exceptions.NotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import com.innowise.orderservice.service.interfaces.OrderService;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -38,6 +40,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemMapper orderItemMapper;
     private final EntityManager entityManager;
     private final UserServiceClient userServiceClient;
+    private final OrderEventProducer orderEventProducer;
 
     @Override
     public OrderWithUserDto create(OrderDto orderDto) {
@@ -67,6 +70,14 @@ public class OrderServiceImpl implements OrderService {
         
         orderDao.create(orderEntity);
         logger.info("Successfully created order with ID: {}", orderEntity.getId());
+        
+        CreateOrderEventDto event = new CreateOrderEventDto(
+                orderEntity.getId(),
+                orderEntity.getUserId(),
+                orderEntity.getStatus(),
+                orderEntity.getCreationDate()
+        );
+        orderEventProducer.sendCreateOrderEvent(event);
         
         OrderDto createdOrderDto = orderMapper.toDto(orderEntity);
         UserDto userDto = userServiceClient.getUserById(orderDto.getUserId());
