@@ -3,9 +3,11 @@ package com.innowise.paymentservice.service.implementation;
 import com.innowise.paymentservice.client.RandomNumberClient;
 import com.innowise.paymentservice.dao.interfaces.PaymentDao;
 import com.innowise.paymentservice.dto.mappers.PaymentMapper;
+import com.innowise.paymentservice.dto.models.CreatePaymentEventDto;
 import com.innowise.paymentservice.dto.models.PaymentDto;
 import com.innowise.paymentservice.entities.PaymentEntity;
 import com.innowise.paymentservice.exceptions.BadRequestException;
+import com.innowise.paymentservice.kafka.PaymentEventProducer;
 import com.innowise.paymentservice.service.interfaces.PaymentService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentDao paymentDao;
     private final PaymentMapper paymentMapper;
     private final RandomNumberClient randomNumberClient;
+    private final PaymentEventProducer paymentEventProducer;
 
     @Override
     public PaymentDto create(PaymentDto paymentDto) {
@@ -47,6 +50,16 @@ public class PaymentServiceImpl implements PaymentService {
 
         paymentDao.create(paymentEntity);
         logger.info("Successfully created payment with ID: {}", paymentEntity.getId());
+
+        CreatePaymentEventDto event = new CreatePaymentEventDto(
+                paymentEntity.getId(),
+                paymentEntity.getOrderId(),
+                paymentEntity.getUserId(),
+                paymentEntity.getStatus(),
+                paymentEntity.getTimestamp(),
+                paymentEntity.getPaymentAmount()
+        );
+        paymentEventProducer.sendCreatePaymentEvent(event);
 
         return paymentMapper.toDto(paymentEntity);
     }
