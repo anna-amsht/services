@@ -25,14 +25,12 @@ public class PaymentDaoImpl implements PaymentDao {
 
     @Override
     public void create(PaymentEntity paymentEntity) {
-        logger.debug("Creating payment for orderId: {}", paymentEntity.getOrderId());
         entityManager.persist(paymentEntity);
         logger.debug("Successfully created payment with ID: {}", paymentEntity.getId());
     }
 
     @Override
     public List<PaymentEntity> getByOrderId(Long orderId) {
-        logger.debug("Getting payments by orderId: {}", orderId);
         TypedQuery<PaymentEntity> query = entityManager.createQuery(
                 "SELECT p FROM PaymentEntity p WHERE p.orderId = :orderId", PaymentEntity.class);
         query.setParameter("orderId", orderId);
@@ -41,7 +39,6 @@ public class PaymentDaoImpl implements PaymentDao {
 
     @Override
     public List<PaymentEntity> getByUserId(Long userId) {
-        logger.debug("Getting payments by userId: {}", userId);
         TypedQuery<PaymentEntity> query = entityManager.createQuery(
                 "SELECT p FROM PaymentEntity p WHERE p.userId = :userId", PaymentEntity.class);
         query.setParameter("userId", userId);
@@ -50,7 +47,6 @@ public class PaymentDaoImpl implements PaymentDao {
 
     @Override
     public List<PaymentEntity> getByStatuses(List<String> statuses) {
-        logger.debug("Getting payments by statuses: {}", statuses);
         if (statuses == null || statuses.isEmpty()) {
             return List.of();
         }
@@ -62,7 +58,6 @@ public class PaymentDaoImpl implements PaymentDao {
 
     @Override
     public BigDecimal getTotalSumByPeriod(LocalDateTime start, LocalDateTime end) {
-        logger.debug("Calculating total payment sum between {} and {}", start, end);
         TypedQuery<BigDecimal> query = entityManager.createQuery(
                 "SELECT COALESCE(SUM(p.paymentAmount), 0) FROM PaymentEntity p WHERE p.timestamp BETWEEN :start AND :end",
                 BigDecimal.class);
