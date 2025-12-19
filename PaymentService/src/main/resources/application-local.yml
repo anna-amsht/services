@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: PaymentService-Local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  liquibase:
+    change-log: classpath:db/changelog/changelog-master.xml
+    enabled: true
+
+logging:
+  level:
+    com.innowise.paymentservice: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type: TRACE
+
+random-number:
+  url: https://www.randomnumberapi.com/api/v1.0/random?min=1&max=100&count=1
+
