@@ -1,17 +1,19 @@
 package com.innowise.paymentservice.entities;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "payments")
+@Document(collection = "payments")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -19,23 +21,26 @@ import java.time.LocalDateTime;
 public class PaymentEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(name = "order_id", nullable = false, updatable = false)
+    @Field(name = "order_id")
+    @Indexed
     private Long orderId;
 
-    @Column(name = "user_id", nullable = false, updatable = false)
+    @Field(name = "user_id")
+    @Indexed
     private Long userId;
 
-    @Column(name = "status", nullable = false)
+    @Field(name = "status")
+    @Indexed
     private String status;
 
-    @Column(name = "timestamp", nullable = false, updatable = false)
+    @Field(name = "timestamp")
+    @Indexed
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime timestamp;
 
-    @Column(name = "payment_amount", nullable = false)
+    @Field(name = "payment_amount")
     private BigDecimal paymentAmount;
 }
 
