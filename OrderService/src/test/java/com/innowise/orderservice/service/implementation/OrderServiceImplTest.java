@@ -9,6 +9,7 @@ import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.entities.OrderItemEntity;
 import com.innowise.orderservice.exceptions.BadRequestException;
 import com.innowise.orderservice.exceptions.NotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class OrderServiceImplTest {
 
     @Mock
     private UserServiceClient userServiceClient;
+
+    @Mock
+    private OrderEventProducer orderEventProducer;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -122,6 +126,7 @@ class OrderServiceImplTest {
         verify(orderDao).create(any(OrderEntity.class));
         verify(entityManager).find(ItemEntity.class, 1L);
         verify(userServiceClient).getUserById(100L);
+        verify(orderEventProducer).sendCreateOrderEvent(any(CreateOrderEventDto.class));
     }
 
     @Test
@@ -136,6 +141,7 @@ class OrderServiceImplTest {
         );
         assertEquals("Item with id 1 not found", exception.getMessage());
         verify(orderDao, never()).create(any());
+        verify(orderEventProducer, never()).sendCreateOrderEvent(any(CreateOrderEventDto.class));
     }
 
     @Test
@@ -267,6 +273,28 @@ class OrderServiceImplTest {
         );
         assertEquals("Order not found with id: 999", exception.getMessage());
         verify(orderDao, never()).delete(any());
+    }
+
+    @Test
+    void testUpdateOrderStatus() {
+        when(orderDao.getById(1L)).thenReturn(Optional.of(orderEntity));
+
+        orderService.updateOrderStatus(1L, "PAID");
+
+        verify(orderDao).update(eq(1L), any(OrderEntity.class));
+        assertEquals("PAID", orderEntity.getStatus());
+    }
+
+    @Test
+    void testUpdateOrderStatusWhenOrderNotFound() {
+        when(orderDao.getById(999L)).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> orderService.updateOrderStatus(999L, "PAID")
+        );
+        assertEquals("Order not found with id: 999", exception.getMessage());
+        verify(orderDao, never()).update(any(), any());
     }
 }
 

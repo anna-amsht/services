@@ -1,0 +1,53 @@
+{
+  "databaseChangeLog": [
+    {
+      "changeSet": {
+        "id": "create-payments-collection",
+        "author": "anna",
+        "changes": [
+          {
+            "ext:createCollection": {
+              "collectionName": "payments"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "changeSet": {
+        "id": "create-indexes-payments",
+        "author": "anna",
+        "changes": [
+          {
+            "ext:createIndex": {
+              "collectionName": "payments",
+              "keys": "{ order_id: 1 }",
+              "options": "{ name: 'idx_order_id' }"
+            }
+          },
+          {
+            "ext:createIndex": {
+              "collectionName": "payments",
+              "keys": "{ user_id: 1 }",
+              "options": "{ name: 'idx_user_id' }"
+            }
+          },
+          {
+            "ext:createIndex": {
+              "collectionName": "payments",
+              "keys": "{ status: 1 }",
+              "options": "{ name: 'idx_status' }"
+            }
+          },
+          {
+            "ext:createIndex": {
+              "collectionName": "payments",
+              "keys": "{ timestamp: 1 }",
+              "options": "{ name: 'idx_timestamp' }"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

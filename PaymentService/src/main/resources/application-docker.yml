@@ -1,17 +1,12 @@
 spring:
   application:
     name: PaymentService-Docker
-  datasource:
-    url: jdbc:postgresql://postgres-payment:5432/payment_service
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    hibernate:
-      ddl-auto: none
-    show-sql: false
+  data:
+    mongodb:
+      uri: mongodb://mongo-payment:27017/payment_service
+      database: payment_service
   liquibase:
-    change-log: classpath:db/changelog/changelog-master.xml
+    change-log: classpath:db/changelog/changelog-master.json
     enabled: true
   kafka:
     bootstrap-servers: kafka-1:9092,kafka-2:9092

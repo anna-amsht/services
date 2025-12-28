@@ -6,6 +6,7 @@ import com.innowise.orderservice.entities.ItemEntity;
 import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.exceptions.BadRequestException;
 import com.innowise.orderservice.exceptions.NotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import com.innowise.orderservice.service.interfaces.OrderService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Assertions;
@@ -68,6 +69,9 @@ public class OrderServiceIntegrationTest {
 
     @MockBean
     private com.innowise.orderservice.client.UserClient userClient;
+
+    @MockBean
+    private OrderEventProducer orderEventProducer;
 
     private ItemEntity testItem;
     private OrderDto testOrder;
@@ -307,6 +311,28 @@ public class OrderServiceIntegrationTest {
 
         Optional<OrderEntity> orderAfter = orderDao.getById(orderId);
         Assertions.assertTrue(orderAfter.isEmpty());
+    }
+
+    @Test
+    void testUpdateOrderStatus() {
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
+        Assertions.assertEquals("PENDING", created.getOrder().getStatus());
+
+        orderService.updateOrderStatus(created.getOrder().getId(), "PAID");
+
+        Optional<OrderEntity> updated = orderDao.getById(created.getOrder().getId());
+        Assertions.assertTrue(updated.isPresent());
+        Assertions.assertEquals("PAID", updated.get().getStatus());
+    }
+
+    @Test
+    void testUpdateOrderStatusWhenOrderNotFound() {
+        NotFoundException exception = Assertions.assertThrows(
+                NotFoundException.class,
+                () -> orderService.updateOrderStatus(999L, "PAID")
+        );
+        Assertions.assertEquals("Order not found with id: 999", exception.getMessage());
     }
 }
 
