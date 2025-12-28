@@ -8,8 +8,8 @@ import com.innowise.paymentservice.dto.models.PaymentDto;
 import com.innowise.paymentservice.entities.PaymentEntity;
 import com.innowise.paymentservice.exceptions.BadRequestException;
 import com.innowise.paymentservice.kafka.PaymentEventProducer;
+import com.innowise.paymentservice.service.PaymentIdGenerator;
 import com.innowise.paymentservice.service.interfaces.PaymentService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
 @Validated
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
@@ -34,12 +33,14 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper paymentMapper;
     private final RandomNumberClient randomNumberClient;
     private final PaymentEventProducer paymentEventProducer;
+    private final PaymentIdGenerator paymentIdGenerator;
 
     @Override
     public PaymentDto create(PaymentDto paymentDto) {
         logger.info("Creating payment for orderId: {}", paymentDto.getOrderId());
 
         PaymentEntity paymentEntity = paymentMapper.toEntity(paymentDto);
+        paymentEntity.setId(paymentIdGenerator.generateId());
         if (paymentEntity.getTimestamp() == null) {
             paymentEntity.setTimestamp(LocalDateTime.now());
         }
@@ -48,26 +49,26 @@ public class PaymentServiceImpl implements PaymentService {
         String status = (randomNumber != null && randomNumber % 2 == 0) ? "SUCCESS" : "FAILED";
         paymentEntity.setStatus(status);
 
-        paymentDao.create(paymentEntity);
-        logger.info("Successfully created payment with ID: {}", paymentEntity.getId());
+        PaymentEntity savedPayment = paymentDao.save(paymentEntity);
+        logger.info("Successfully created payment with ID: {}", savedPayment.getId());
 
         CreatePaymentEventDto event = new CreatePaymentEventDto(
-                paymentEntity.getId(),
-                paymentEntity.getOrderId(),
-                paymentEntity.getUserId(),
-                paymentEntity.getStatus(),
-                paymentEntity.getTimestamp(),
-                paymentEntity.getPaymentAmount()
+                savedPayment.getId(),
+                savedPayment.getOrderId(),
+                savedPayment.getUserId(),
+                savedPayment.getStatus(),
+                savedPayment.getTimestamp(),
+                savedPayment.getPaymentAmount()
         );
         paymentEventProducer.sendCreatePaymentEvent(event);
 
-        return paymentMapper.toDto(paymentEntity);
+        return paymentMapper.toDto(savedPayment);
     }
 
     @Override
     public List<PaymentDto> getByOrderId(Long orderId) {
         logger.debug("Getting payments by orderId: {}", orderId);
-        return paymentDao.getByOrderId(orderId).stream()
+        return paymentDao.findByOrderId(orderId).stream()
                 .map(paymentMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -75,7 +76,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public List<PaymentDto> getByUserId(Long userId) {
         logger.debug("Getting payments by userId: {}", userId);
-        return paymentDao.getByUserId(userId).stream()
+        return paymentDao.findByUserId(userId).stream()
                 .map(paymentMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -83,7 +84,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public List<PaymentDto> getByStatuses(List<String> statuses) {
         logger.debug("Getting payments by statuses: {}", statuses);
-        return paymentDao.getByStatuses(statuses).stream()
+        return paymentDao.findByStatusIn(statuses).stream()
                 .map(paymentMapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -102,7 +103,11 @@ public class PaymentServiceImpl implements PaymentService {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.plusDays(1).atStartOfDay().minusNanos(1);
 
-        return paymentDao.getTotalSumByPeriod(start, end);
+        List<PaymentEntity> payments = paymentDao.findByTimestampBetween(start, end);
+        return payments.stream()
+                .map(PaymentEntity::getPaymentAmount)
+                .filter(amount -> amount != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
 

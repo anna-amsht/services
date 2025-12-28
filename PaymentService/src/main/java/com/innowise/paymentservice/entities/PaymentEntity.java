@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 public class PaymentEntity {
 
     @Id
-    private String id;
+    private Long id;
 
     @Field(name = "order_id")
     @Indexed

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PaymentDto {
 
-    private String id;
+    private Long id;
 
     @NotNull
     private Long orderId;
