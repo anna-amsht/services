@@ -1,9 +1,11 @@
 package com.innowise.paymentservice.service.implementation;
 
+import com.innowise.paymentservice.client.OrderServiceClient;
 import com.innowise.paymentservice.client.RandomNumberClient;
 import com.innowise.paymentservice.dao.interfaces.PaymentDao;
 import com.innowise.paymentservice.dto.mappers.PaymentMapper;
 import com.innowise.paymentservice.dto.models.CreatePaymentEventDto;
+import com.innowise.paymentservice.dto.models.OrderDto;
 import com.innowise.paymentservice.dto.models.PaymentDto;
 import com.innowise.paymentservice.entities.PaymentEntity;
 import com.innowise.paymentservice.exceptions.BadRequestException;
@@ -34,10 +36,27 @@ public class PaymentServiceImpl implements PaymentService {
     private final RandomNumberClient randomNumberClient;
     private final PaymentEventProducer paymentEventProducer;
     private final PaymentIdGenerator paymentIdGenerator;
+    private final OrderServiceClient orderServiceClient;
 
     @Override
     public PaymentDto create(PaymentDto paymentDto) {
         logger.info("Creating payment for orderId: {}", paymentDto.getOrderId());
+
+        OrderDto order = orderServiceClient.getOrderById(paymentDto.getOrderId());
+        if (order == null) {
+            throw new BadRequestException("Order not found with ID: " + paymentDto.getOrderId());
+        }
+
+        if ("PAID".equals(order.getStatus())) {
+            throw new BadRequestException("Order " + paymentDto.getOrderId() + " is already paid");
+        }
+        
+        BigDecimal orderTotal = order.getTotalAmount();
+        if (paymentDto.getPaymentAmount().compareTo(orderTotal) != 0) {
+            throw new BadRequestException(
+                String.format("Payment amount %.2f does not match order total %.2f", 
+                    paymentDto.getPaymentAmount(), orderTotal));
+        }
 
         PaymentEntity paymentEntity = paymentMapper.toEntity(paymentDto);
         paymentEntity.setId(paymentIdGenerator.generateId());
