@@ -22,7 +22,7 @@ public class OrderItemEntity {
     @JoinColumn(name = "order_id", nullable = false, updatable = false)
     private OrderEntity order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "item_id", nullable = false, updatable = false)
     private ItemEntity item;
 
