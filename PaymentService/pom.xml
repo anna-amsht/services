@@ -31,8 +31,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <byte-buddy.version>1.15.11</byte-buddy.version>
         <sonar.organization>anna-amsht</sonar.organization>
-        <sonar.coverage.exclusions>**/dto/**/*, **/entities/**/*, **/dao/**/*, **/config/**/*, **/util/**/*, **/exceptions/**/*, **/kafka/**</sonar.coverage.exclusions>
-        <sonar.exclusions>**/dto/**/*, **/entities/**/*, **/dao/**/*, **/config/**/*, **/util/**/*, **/exceptions/**/*, **/kafka/**</sonar.exclusions>
+        <sonar.coverage.exclusions>**/dto/**/*, **/entities/**/*, **/dao/**/*, **/config/**/*, **/util/**/*, **/exceptions/**/*, **/kafka/**/*, **/client/**/*, **/controller/**/*, **/*Application.java</sonar.coverage.exclusions>
     </properties>
     <dependencies>
         <dependency>
