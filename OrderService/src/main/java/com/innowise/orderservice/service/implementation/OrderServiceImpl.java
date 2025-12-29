@@ -103,6 +103,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public Optional<OrderDto> getOrderOnly(Long id) {
+        logger.debug("Getting order only by id: {}", id);
+        return orderDao.getById(id)
+                .map(orderMapper::toDto);
+    }
+
+    @Override
     public List<OrderWithUserDto> getByIds(List<Long> ids) {
         logger.debug("Getting orders by ids: {}", ids);
         return orderDao.getByIds(ids).stream()

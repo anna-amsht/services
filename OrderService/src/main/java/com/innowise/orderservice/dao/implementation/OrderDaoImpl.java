@@ -68,9 +68,9 @@ public class OrderDaoImpl implements OrderDao {
 
             existingOrder.setStatus(updatedOrder.getStatus());
 
-            existingOrder.getOrderItems().clear();
-            
-            if (updatedOrder.getOrderItems() != null) {
+            // Only update orderItems if they are provided
+            if (updatedOrder.getOrderItems() != null && !updatedOrder.getOrderItems().isEmpty()) {
+                existingOrder.getOrderItems().clear();
                 updatedOrder.getOrderItems().forEach(orderItem -> {
                     orderItem.setOrder(existingOrder);
                     existingOrder.getOrderItems().add(orderItem);
