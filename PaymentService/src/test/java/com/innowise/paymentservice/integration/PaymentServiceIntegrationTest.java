@@ -1,15 +1,15 @@
 package com.innowise.paymentservice.integration;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
+import com.innowise.paymentservice.client.OrderServiceClient;
+import com.innowise.paymentservice.client.RandomNumberClient;
 import com.innowise.paymentservice.dao.interfaces.PaymentDao;
+import com.innowise.paymentservice.dto.models.OrderDto;
+import com.innowise.paymentservice.dto.models.OrderItemDto;
 import com.innowise.paymentservice.dto.models.PaymentDto;
 import com.innowise.paymentservice.entities.PaymentEntity;
 import com.innowise.paymentservice.exceptions.BadRequestException;
 import com.innowise.paymentservice.kafka.PaymentEventProducer;
 import com.innowise.paymentservice.service.interfaces.PaymentService;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +29,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Testcontainers
@@ -46,27 +47,10 @@ public class PaymentServiceIntegrationTest {
     @Container
     private static final KafkaContainer kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
-    private static WireMockServer wireMockServer;
-
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
         registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
-        registry.add("random-number.url", () -> "http://localhost:" + wireMockServer.port() + "/api/random");
-    }
-
-    @BeforeAll
-    static void setupWireMock() {
-        wireMockServer = new WireMockServer(8089);
-        wireMockServer.start();
-        WireMock.configureFor("localhost", wireMockServer.port());
-    }
-
-    @AfterAll
-    static void tearDownWireMock() {
-        if (wireMockServer != null) {
-            wireMockServer.stop();
-        }
     }
 
     @Autowired
@@ -78,28 +62,43 @@ public class PaymentServiceIntegrationTest {
     @MockBean
     private PaymentEventProducer paymentEventProducer;
 
+    @MockBean
+    private OrderServiceClient orderServiceClient;
+
+    @MockBean
+    private RandomNumberClient randomNumberClient;
+
     @BeforeEach
     void cleanDatabase() {
         paymentDao.deleteAll();
     }
 
     @BeforeEach
-    void setupWireMockStubs() {
-        wireMockServer.resetAll();
+    void setupOrderServiceMock() {
+        when(orderServiceClient.getOrderById(anyLong()))
+                .thenAnswer(invocation -> {
+                    OrderItemDto mockItem = OrderItemDto.builder()
+                            .id(1L)
+                            .productId(1L)
+                            .quantity(1)
+                            .price(new BigDecimal("99999.99"))
+                            .build();
+                    return OrderDto.builder()
+                            .id(1L)
+                            .userId(100L)
+                            .status("PENDING")
+                            .orderItems(List.of(mockItem))
+                            .build();
+                });
+        when(randomNumberClient.fetchRandomNumber()).thenReturn(10);
     }
 
     @Test
     void testCreatePaymentWithSuccessStatus() {
-        stubFor(get(urlEqualTo("/api/random"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("[10]")));
-
         PaymentDto paymentDto = PaymentDto.builder()
                 .orderId(100L)
                 .userId(200L)
-                .paymentAmount(new BigDecimal("99.99"))
+                .paymentAmount(new BigDecimal("99999.99"))
                 .build();
 
         PaymentDto created = paymentService.create(paymentDto);
@@ -110,44 +109,15 @@ public class PaymentServiceIntegrationTest {
         assertEquals(paymentDto.getOrderId(), created.getOrderId());
         assertEquals(paymentDto.getUserId(), created.getUserId());
         assertNotNull(created.getTimestamp());
-
-        verify(getRequestedFor(urlEqualTo("/api/random")));
     }
 
-    @Test
-    void testCreatePaymentWithFailedStatus() {
-        stubFor(get(urlEqualTo("/api/random"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("[7]")));
-
-        PaymentDto paymentDto = PaymentDto.builder()
-                .orderId(101L)
-                .userId(201L)
-                .paymentAmount(new BigDecimal("49.99"))
-                .build();
-
-        PaymentDto created = paymentService.create(paymentDto);
-
-        assertNotNull(created);
-        assertEquals("FAILED", created.getStatus());
-
-        verify(getRequestedFor(urlEqualTo("/api/random")));
-    }
 
     @Test
     void testGetByOrderId() {
-        stubFor(get(urlEqualTo("/api/random"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("[10]")));
-
         PaymentDto paymentDto = PaymentDto.builder()
                 .orderId(102L)
                 .userId(202L)
-                .paymentAmount(new BigDecimal("150.00"))
+                .paymentAmount(new BigDecimal("99999.99"))
                 .build();
 
         PaymentDto created = paymentService.create(paymentDto);
@@ -161,16 +131,10 @@ public class PaymentServiceIntegrationTest {
 
     @Test
     void testGetByUserId() {
-        stubFor(get(urlEqualTo("/api/random"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("[8]")));
-
         PaymentDto paymentDto = PaymentDto.builder()
                 .orderId(103L)
                 .userId(203L)
-                .paymentAmount(new BigDecimal("75.50"))
+                .paymentAmount(new BigDecimal("99999.99"))
                 .build();
 
         PaymentDto created = paymentService.create(paymentDto);
@@ -184,16 +148,10 @@ public class PaymentServiceIntegrationTest {
 
     @Test
     void testGetByStatuses() {
-        stubFor(get(urlEqualTo("/api/random"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("[12]")));
-
         PaymentDto paymentDto = PaymentDto.builder()
                 .orderId(104L)
                 .userId(204L)
-                .paymentAmount(new BigDecimal("200.00"))
+                .paymentAmount(new BigDecimal("99999.99"))
                 .build();
 
         paymentService.create(paymentDto);
@@ -207,22 +165,16 @@ public class PaymentServiceIntegrationTest {
 
     @Test
     void testGetTotalSumByPeriod() {
-        stubFor(get(urlEqualTo("/api/random"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("[10]")));
-
         PaymentDto payment1 = PaymentDto.builder()
                 .orderId(105L)
                 .userId(205L)
-                .paymentAmount(new BigDecimal("100.00"))
+                .paymentAmount(new BigDecimal("99999.99"))
                 .build();
 
         PaymentDto payment2 = PaymentDto.builder()
                 .orderId(106L)
                 .userId(206L)
-                .paymentAmount(new BigDecimal("150.00"))
+                .paymentAmount(new BigDecimal("99999.99"))
                 .build();
 
         paymentService.create(payment1);

@@ -28,6 +28,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,6 +85,7 @@ class OrderServiceImplTest {
         orderItemDto.setItemId(1L);
         orderItemDto.setItem(itemDto);
         orderItemDto.setQuantity(2);
+        orderItemDto.setPrice(new BigDecimal("99.99"));
 
         orderEntity = new OrderEntity();
         orderEntity.setId(1L);
@@ -278,10 +280,15 @@ class OrderServiceImplTest {
     @Test
     void testUpdateOrderStatus() {
         when(orderDao.getById(1L)).thenReturn(Optional.of(orderEntity));
+        doAnswer(invocation -> {
+            String status = invocation.getArgument(1);
+            orderEntity.setStatus(status);
+            return null;
+        }).when(orderDao).updateStatus(eq(1L), anyString());
 
         orderService.updateOrderStatus(1L, "PAID");
 
-        verify(orderDao).update(eq(1L), any(OrderEntity.class));
+        verify(orderDao).updateStatus(eq(1L), eq("PAID"));
         assertEquals("PAID", orderEntity.getStatus());
     }
 
@@ -294,7 +301,31 @@ class OrderServiceImplTest {
                 () -> orderService.updateOrderStatus(999L, "PAID")
         );
         assertEquals("Order not found with id: 999", exception.getMessage());
-        verify(orderDao, never()).update(any(), any());
+        verify(orderDao, never()).updateStatus(any(), any());
+    }
+
+    @Test
+    void testGetOrderOnly() {
+        when(orderDao.getById(1L)).thenReturn(Optional.of(orderEntity));
+        when(orderMapper.toDto(orderEntity)).thenReturn(orderDto);
+
+        Optional<OrderDto> result = orderService.getOrderOnly(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(orderDto.getId(), result.get().getId());
+        verify(orderDao).getById(1L);
+        verify(orderMapper).toDto(orderEntity);
+        verifyNoInteractions(userServiceClient);
+    }
+
+    @Test
+    void testGetOrderOnlyNotFound() {
+        when(orderDao.getById(999L)).thenReturn(Optional.empty());
+
+        Optional<OrderDto> result = orderService.getOrderOnly(999L);
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(userServiceClient);
     }
 }
 

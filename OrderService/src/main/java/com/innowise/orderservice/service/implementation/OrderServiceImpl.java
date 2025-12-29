@@ -187,11 +187,11 @@ public class OrderServiceImpl implements OrderService {
     public void updateOrderStatus(Long orderId, String status) {
         logger.info("Updating order status for orderId: {} to status: {}", orderId, status);
         
-        OrderEntity orderEntity = orderDao.getById(orderId)
-                .orElseThrow(() -> new NotFoundException("Order not found with id: " + orderId));
+        if (orderDao.getById(orderId).isEmpty()) {
+            throw new NotFoundException("Order not found with id: " + orderId);
+        }
         
-        orderEntity.setStatus(status);
-        orderDao.update(orderId, orderEntity);
+        orderDao.updateStatus(orderId, status);
         
         logger.info("Successfully updated order status for orderId: {}", orderId);
     }

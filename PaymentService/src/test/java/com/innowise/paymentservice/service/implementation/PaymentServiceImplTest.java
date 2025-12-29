@@ -1,10 +1,13 @@
 package com.innowise.paymentservice.service.implementation;
 
 import com.innowise.paymentservice.client.RandomNumberClient;
+import com.innowise.paymentservice.client.OrderServiceClient;
 import com.innowise.paymentservice.dao.interfaces.PaymentDao;
 import com.innowise.paymentservice.dto.mappers.PaymentMapper;
 import com.innowise.paymentservice.dto.models.CreatePaymentEventDto;
 import com.innowise.paymentservice.dto.models.PaymentDto;
+import com.innowise.paymentservice.dto.models.OrderDto;
+import com.innowise.paymentservice.dto.models.OrderItemDto;
 import com.innowise.paymentservice.entities.PaymentEntity;
 import com.innowise.paymentservice.exceptions.BadRequestException;
 import com.innowise.paymentservice.kafka.PaymentEventProducer;
@@ -38,6 +41,9 @@ class PaymentServiceImplTest {
     private RandomNumberClient randomNumberClient;
 
     @Mock
+    private OrderServiceClient orderServiceClient;
+
+    @Mock
     private PaymentEventProducer paymentEventProducer;
 
     @Mock
@@ -69,8 +75,27 @@ class PaymentServiceImplTest {
                 .build();
     }
 
+    private void setupOrderServiceClientMock() {
+        when(orderServiceClient.getOrderById(any())).thenReturn(
+                OrderDto.builder()
+                        .id(1L)
+                        .userId(100L)
+                        .status("PENDING")
+                        .orderItems(List.of(
+                                OrderItemDto.builder()
+                                        .id(1L)
+                                        .productId(1L)
+                                        .quantity(1)
+                                        .price(new BigDecimal("99.99"))
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
     @Test
     void testCreateWithEvenRandomNumber() {
+        setupOrderServiceClientMock();
         when(paymentMapper.toEntity(paymentDto)).thenReturn(paymentEntity);
         when(randomNumberClient.fetchRandomNumber()).thenReturn(10);
         when(paymentIdGenerator.generateId()).thenReturn(1L);
@@ -89,6 +114,7 @@ class PaymentServiceImplTest {
 
     @Test
     void testCreateWithOddRandomNumber() {
+        setupOrderServiceClientMock();
         when(paymentMapper.toEntity(paymentDto)).thenReturn(paymentEntity);
         when(randomNumberClient.fetchRandomNumber()).thenReturn(7);
         when(paymentIdGenerator.generateId()).thenReturn(2L);
@@ -105,6 +131,7 @@ class PaymentServiceImplTest {
 
     @Test
     void testCreateWithNullRandomNumber() {
+        setupOrderServiceClientMock();
         when(paymentMapper.toEntity(paymentDto)).thenReturn(paymentEntity);
         when(randomNumberClient.fetchRandomNumber()).thenReturn(null);
         when(paymentIdGenerator.generateId()).thenReturn(3L);
