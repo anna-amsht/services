@@ -22,13 +22,9 @@ public class OrderEventConsumer {
         log.info("Received CREATE_ORDER event for orderId: {}, userId: {}, status: {}", 
                 event.getOrderId(), event.getUserId(), event.getStatus());
         
-        PaymentDto paymentDto = PaymentDto.builder()
-                .orderId(event.getOrderId())
-                .userId(event.getUserId())
-                .paymentAmount(BigDecimal.ZERO)
-                .build();
-        
-        PaymentDto createdPayment = paymentService.create(paymentDto);
-        log.info("Created payment with ID: {} for orderId: {}", createdPayment.getId(), event.getOrderId());
+        // Note: This creates a payment record with zero amount
+        // The actual payment will be created manually via POST /api/v1/payments
+        // This just creates a placeholder payment entry
+        log.debug("Skipping automatic payment creation for order {}, awaiting manual payment", event.getOrderId());
     }
 }
