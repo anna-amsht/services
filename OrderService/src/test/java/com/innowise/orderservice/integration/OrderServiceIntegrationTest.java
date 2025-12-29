@@ -6,6 +6,7 @@ import com.innowise.orderservice.entities.ItemEntity;
 import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.exceptions.BadRequestException;
 import com.innowise.orderservice.exceptions.NotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import com.innowise.orderservice.service.interfaces.OrderService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Assertions;
@@ -26,18 +27,21 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(properties = {
-        "spring.liquibase.change-log=classpath:db/changelog/changelog-master.xml"
+        "spring.liquibase.change-log=classpath:db/changelog/changelog-master.xml",
+        "spring.kafka.enabled=false",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
 })
 public class OrderServiceIntegrationTest {
 
@@ -69,6 +73,9 @@ public class OrderServiceIntegrationTest {
     @MockBean
     private com.innowise.orderservice.client.UserClient userClient;
 
+    @MockBean
+    private OrderEventProducer orderEventProducer;
+
     private ItemEntity testItem;
     private OrderDto testOrder;
     private UserDto mockUserDto;
@@ -82,7 +89,6 @@ public class OrderServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Create test item directly in database (will be in transaction when test runs)
         testItem = new ItemEntity();
         testItem.setName("Test Item");
         testItem.setPrice(new BigDecimal("99.99"));
@@ -99,7 +105,14 @@ public class OrderServiceIntegrationTest {
                 .birthdate(LocalDate.of(1990, 1, 1))
                 .build();
 
-        when(userClient.getUserById(anyLong())).thenReturn(mockUserDto);
+        when(userClient.getUserById(eq(100L), anyString())).thenReturn(mockUserDto);
+        when(userClient.getUserById(eq(200L), anyString())).thenReturn(UserDto.builder()
+                .id(200L)
+                .name("Test2")
+                .surname("User2")
+                .email("test2@example.com")
+                .birthdate(LocalDate.of(1991, 1, 1))
+                .build());
     }
 
     private void createTestItem() {
@@ -307,6 +320,56 @@ public class OrderServiceIntegrationTest {
 
         Optional<OrderEntity> orderAfter = orderDao.getById(orderId);
         Assertions.assertTrue(orderAfter.isEmpty());
+    }
+
+    @Test
+    void testUpdateOrderStatus() {
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
+        Assertions.assertEquals("PENDING", created.getOrder().getStatus());
+        
+        // Verify orderItems exist before status update
+        Optional<OrderEntity> beforeUpdate = orderDao.getById(created.getOrder().getId());
+        Assertions.assertTrue(beforeUpdate.isPresent());
+        Assertions.assertFalse(beforeUpdate.get().getOrderItems().isEmpty());
+
+        orderService.updateOrderStatus(created.getOrder().getId(), "PAID");
+
+        Optional<OrderEntity> updated = orderDao.getById(created.getOrder().getId());
+        Assertions.assertTrue(updated.isPresent());
+        Assertions.assertEquals("PAID", updated.get().getStatus());
+        // Verify orderItems still exist after status update
+        Assertions.assertFalse(updated.get().getOrderItems().isEmpty());
+    }
+
+    @Test
+    void testUpdateOrderStatusWhenOrderNotFound() {
+        NotFoundException exception = Assertions.assertThrows(
+                NotFoundException.class,
+                () -> orderService.updateOrderStatus(999L, "PAID")
+        );
+        Assertions.assertEquals("Order not found with id: 999", exception.getMessage());
+    }
+
+    @Test
+    void testGetOrderOnly() {
+        createTestItem();
+        OrderWithUserDto created = orderService.create(testOrder);
+
+        Optional<OrderDto> found = orderService.getOrderOnly(created.getOrder().getId());
+
+        Assertions.assertTrue(found.isPresent());
+        Assertions.assertEquals(created.getOrder().getId(), found.get().getId());
+        Assertions.assertEquals(created.getOrder().getUserId(), found.get().getUserId());
+        Assertions.assertNotNull(found.get().getOrderItems());
+        Assertions.assertFalse(found.get().getOrderItems().isEmpty());
+    }
+
+    @Test
+    void testGetOrderOnlyNotFound() {
+        Optional<OrderDto> found = orderService.getOrderOnly(999L);
+
+        Assertions.assertTrue(found.isEmpty());
     }
 }
 

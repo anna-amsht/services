@@ -65,12 +65,10 @@ public class OrderDaoImpl implements OrderDao {
         logger.debug("Updating order with id: {}", id);
         OrderEntity existingOrder = entityManager.find(OrderEntity.class, id);
         if (existingOrder != null) {
-
             existingOrder.setStatus(updatedOrder.getStatus());
 
-            existingOrder.getOrderItems().clear();
-            
-            if (updatedOrder.getOrderItems() != null) {
+            if (updatedOrder.getOrderItems() != null && !updatedOrder.getOrderItems().isEmpty()) {
+                existingOrder.getOrderItems().clear();
                 updatedOrder.getOrderItems().forEach(orderItem -> {
                     orderItem.setOrder(existingOrder);
                     existingOrder.getOrderItems().add(orderItem);
@@ -78,6 +76,16 @@ public class OrderDaoImpl implements OrderDao {
             }
             
             logger.debug("Successfully updated order with ID: {}", id);
+        }
+    }
+    
+    @Override
+    public void updateStatus(Long id, String status) {
+        logger.debug("Updating order status with id: {} to {}", id, status);
+        OrderEntity existingOrder = entityManager.find(OrderEntity.class, id);
+        if (existingOrder != null) {
+            existingOrder.setStatus(status);
+            logger.debug("Successfully updated order status with ID: {}", id);
         }
     }
 

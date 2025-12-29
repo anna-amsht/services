@@ -9,6 +9,7 @@ import com.innowise.orderservice.entities.OrderEntity;
 import com.innowise.orderservice.entities.OrderItemEntity;
 import com.innowise.orderservice.exceptions.BadRequestException;
 import com.innowise.orderservice.exceptions.NotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +48,9 @@ class OrderServiceImplTest {
 
     @Mock
     private UserServiceClient userServiceClient;
+
+    @Mock
+    private OrderEventProducer orderEventProducer;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -80,6 +85,7 @@ class OrderServiceImplTest {
         orderItemDto.setItemId(1L);
         orderItemDto.setItem(itemDto);
         orderItemDto.setQuantity(2);
+        orderItemDto.setPrice(new BigDecimal("99.99"));
 
         orderEntity = new OrderEntity();
         orderEntity.setId(1L);
@@ -122,6 +128,7 @@ class OrderServiceImplTest {
         verify(orderDao).create(any(OrderEntity.class));
         verify(entityManager).find(ItemEntity.class, 1L);
         verify(userServiceClient).getUserById(100L);
+        verify(orderEventProducer).sendCreateOrderEvent(any(CreateOrderEventDto.class));
     }
 
     @Test
@@ -136,6 +143,7 @@ class OrderServiceImplTest {
         );
         assertEquals("Item with id 1 not found", exception.getMessage());
         verify(orderDao, never()).create(any());
+        verify(orderEventProducer, never()).sendCreateOrderEvent(any(CreateOrderEventDto.class));
     }
 
     @Test
@@ -267,6 +275,57 @@ class OrderServiceImplTest {
         );
         assertEquals("Order not found with id: 999", exception.getMessage());
         verify(orderDao, never()).delete(any());
+    }
+
+    @Test
+    void testUpdateOrderStatus() {
+        when(orderDao.getById(1L)).thenReturn(Optional.of(orderEntity));
+        doAnswer(invocation -> {
+            String status = invocation.getArgument(1);
+            orderEntity.setStatus(status);
+            return null;
+        }).when(orderDao).updateStatus(eq(1L), anyString());
+
+        orderService.updateOrderStatus(1L, "PAID");
+
+        verify(orderDao).updateStatus(eq(1L), eq("PAID"));
+        assertEquals("PAID", orderEntity.getStatus());
+    }
+
+    @Test
+    void testUpdateOrderStatusWhenOrderNotFound() {
+        when(orderDao.getById(999L)).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> orderService.updateOrderStatus(999L, "PAID")
+        );
+        assertEquals("Order not found with id: 999", exception.getMessage());
+        verify(orderDao, never()).updateStatus(any(), any());
+    }
+
+    @Test
+    void testGetOrderOnly() {
+        when(orderDao.getById(1L)).thenReturn(Optional.of(orderEntity));
+        when(orderMapper.toDto(orderEntity)).thenReturn(orderDto);
+
+        Optional<OrderDto> result = orderService.getOrderOnly(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(orderDto.getId(), result.get().getId());
+        verify(orderDao).getById(1L);
+        verify(orderMapper).toDto(orderEntity);
+        verifyNoInteractions(userServiceClient);
+    }
+
+    @Test
+    void testGetOrderOnlyNotFound() {
+        when(orderDao.getById(999L)).thenReturn(Optional.empty());
+
+        Optional<OrderDto> result = orderService.getOrderOnly(999L);
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(userServiceClient);
     }
 }
 

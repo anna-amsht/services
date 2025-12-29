@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [UserService, OrderService]
+        service: [UserService, OrderService, PaymentService]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -40,7 +40,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        service: [UserService, OrderService]
+        service: [UserService, OrderService, PaymentService]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -51,19 +51,25 @@ jobs:
       - name: Run tests
         run: |
           cd ${{ matrix.service }}
-          mvn -B test
+          if [ "${{ matrix.service }}" = "PaymentService" ]; then
+            mvn -B test -Dnet.bytebuddy.experimental=true
+          else
+            mvn -B test
+          fi
 
   sonarQube:
     runs-on: ubuntu-latest
     needs: test
     strategy:
       matrix:
-        service: [UserService, OrderService]
+        service: [UserService, OrderService, PaymentService]
         include:
           - service: UserService
             sonar-project-key: anna-amsht_services_userservice
           - service: OrderService
             sonar-project-key: anna-amsht_services_orderservice
+          - service: PaymentService
+            sonar-project-key: anna-amsht_services_paymentservice
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,14 +100,14 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           cd ${{ matrix.service }}
-          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=${{ matrix.sonar-project-key }} -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=anna-amsht -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=${{ matrix.sonar-project-key }} -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=anna-amsht
   docker:
     runs-on: ubuntu-latest
     needs: sonarQube
     if: github.ref == 'refs/heads/master' || github.event_name == 'pull_request'
     strategy:
       matrix:
-        service: [UserService, OrderService]
+        service: [UserService, OrderService, PaymentService]
         include:
           - service: UserService
             image-name: user-service
@@ -109,6 +115,9 @@ jobs:
           - service: OrderService
             image-name: order-service
             port: 8084
+          - service: PaymentService
+            image-name: payment-service
+            port: 8086
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

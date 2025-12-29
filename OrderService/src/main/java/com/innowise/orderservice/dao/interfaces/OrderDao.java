@@ -11,6 +11,7 @@ public interface OrderDao {
     List<OrderEntity> getByIds(List<Long> ids);
     List<OrderEntity> getByStatuses(List<String> statuses);
     void update(Long id, OrderEntity updatedOrder);
+    void updateStatus(Long id, String status);
     void delete(Long id);
 }
 

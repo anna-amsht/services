@@ -37,7 +37,7 @@ public class OrderEntity {
             mappedBy = "order",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
-            fetch = FetchType.LAZY
+            fetch = FetchType.EAGER
     )
     private List<OrderItemEntity> orderItems = new ArrayList<>();
 }
