@@ -85,6 +85,18 @@ public class UserController {
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
     }
 
+    @GetMapping("/internal/{id}")
+    public ResponseEntity<UserDto> getByIdInternal(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        if (!"${INTERNAL_SERVICE_TOKEN}".equals(internalToken) && !"internal-service-secret".equals(internalToken)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        Optional<UserDto> user = userService.getById(id);
+        return user.map(ResponseEntity::ok)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+    }
+
     @GetMapping(params = "email")
     @PreAuthorize("hasRole('ADMIN')") // Only admins can search by email for privacy reasons
     public ResponseEntity<UserDto> getByEmail(@RequestParam String email){
