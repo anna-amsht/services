@@ -40,6 +40,19 @@ public class OrderController {
                 .orElseThrow(() -> new NotFoundException("Order not found with id: " + id));
     }
 
+    @GetMapping("/internal/{id}")
+    public ResponseEntity<OrderDto> getByIdInternal(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        if (!"internal-service-secret".equals(internalToken)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        logger.debug("Getting order by id: {}", id);
+        Optional<OrderDto> order = orderService.getOrderOnly(id);
+        return order.map(ResponseEntity::ok)
+                .orElseThrow(() -> new NotFoundException("Order not found with id: " + id));
+    }
+
     @GetMapping(params = "ids")
     public ResponseEntity<List<OrderWithUserDto>> getByIds(@RequestParam List<Long> ids) {
         logger.debug("Getting orders by ids: {}", ids);
