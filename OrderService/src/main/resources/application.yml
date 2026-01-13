@@ -35,6 +35,10 @@ server:
 user-service:
   url: ${USER_SERVICE_URL:http://localhost:8082}
 
+internal:
+  service:
+    token: ${INTERNAL_SERVICE_TOKEN:internal-service-secret}
+
 resilience4j:
   circuitbreaker:
     instances:

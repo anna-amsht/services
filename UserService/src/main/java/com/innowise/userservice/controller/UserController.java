@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import jakarta.validation.ConstraintViolationException;
@@ -31,6 +32,9 @@ public class UserController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
+
+    @Value("${internal.service.token}")
+    private String internalTokenValue;
 
     @PostMapping
 
@@ -89,7 +93,7 @@ public class UserController {
     public ResponseEntity<UserDto> getByIdInternal(
             @PathVariable Long id,
             @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
-        if (!"${INTERNAL_SERVICE_TOKEN}".equals(internalToken) && !"internal-service-secret".equals(internalToken)) {
+        if (!internalTokenValue.equals(internalToken)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         Optional<UserDto> user = userService.getById(id);

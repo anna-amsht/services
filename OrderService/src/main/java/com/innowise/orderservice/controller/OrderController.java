@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,9 @@ public class OrderController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
 
     private final OrderService orderService;
+
+    @Value("${internal.service.token}")
+    private String internalTokenValue;
 
     @PostMapping
     public ResponseEntity<OrderWithUserDto> create(@Valid @RequestBody OrderDto orderDto) {
@@ -44,7 +48,7 @@ public class OrderController {
     public ResponseEntity<OrderDto> getByIdInternal(
             @PathVariable Long id,
             @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
-        if (!"internal-service-secret".equals(internalToken)) {
+        if (!internalTokenValue.equals(internalToken)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         logger.debug("Getting order by id: {}", id);
