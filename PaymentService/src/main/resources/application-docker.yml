@@ -5,6 +5,9 @@ spring:
     mongodb:
       uri: mongodb://mongo-payment:27017/payment_service
       database: payment_service
+    redis:
+      host: redis
+      port: 6379
   liquibase:
     change-log: classpath:db/changelog/changelog-master.json
     enabled: true
@@ -37,4 +40,13 @@ random-number:
 
 order-service:
   url: ${ORDER_SERVICE_URL:http://order-service:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
