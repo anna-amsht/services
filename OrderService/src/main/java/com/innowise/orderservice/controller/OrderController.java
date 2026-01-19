@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,9 @@ public class OrderController {
 
     private final OrderService orderService;
 
+    @Value("${internal.service.token}")
+    private String internalTokenValue;
+
     @PostMapping
     public ResponseEntity<OrderWithUserDto> create(@Valid @RequestBody OrderDto orderDto) {
         logger.info("Creating new order for userId: {}", orderDto.getUserId());
@@ -36,6 +40,19 @@ public class OrderController {
     public ResponseEntity<OrderWithUserDto> getById(@PathVariable Long id) {
         logger.debug("Getting order by id: {}", id);
         Optional<OrderWithUserDto> order = orderService.getById(id);
+        return order.map(ResponseEntity::ok)
+                .orElseThrow(() -> new NotFoundException("Order not found with id: " + id));
+    }
+
+    @GetMapping("/internal/{id}")
+    public ResponseEntity<OrderDto> getByIdInternal(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        if (!internalTokenValue.equals(internalToken)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        logger.debug("Getting order by id: {}", id);
+        Optional<OrderDto> order = orderService.getOrderOnly(id);
         return order.map(ResponseEntity::ok)
                 .orElseThrow(() -> new NotFoundException("Order not found with id: " + id));
     }

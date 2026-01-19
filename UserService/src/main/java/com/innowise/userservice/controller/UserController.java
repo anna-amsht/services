@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Optional;
 import jakarta.validation.ConstraintViolationException;
@@ -31,6 +32,9 @@ public class UserController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
+
+    @Value("${internal.service.token}")
+    private String internalTokenValue;
 
     @PostMapping
 
@@ -80,6 +84,18 @@ public class UserController {
     @GetMapping("/{id}")
     @PreAuthorize("#id == authentication.details['userId'] or hasRole('ADMIN')")
     public ResponseEntity<UserDto> getById(@PathVariable Long id) {
+        Optional<UserDto> user = userService.getById(id);
+        return user.map(ResponseEntity::ok)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+    }
+
+    @GetMapping("/internal/{id}")
+    public ResponseEntity<UserDto> getByIdInternal(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        if (!internalTokenValue.equals(internalToken)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         Optional<UserDto> user = userService.getById(id);
         return user.map(ResponseEntity::ok)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));

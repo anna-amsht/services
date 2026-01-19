@@ -3,6 +3,8 @@ package com.innowise.orderservice.dto.models;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,5 +21,6 @@ public class OrderItemDto {
     @NotNull
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
+    private BigDecimal price;
 }
 

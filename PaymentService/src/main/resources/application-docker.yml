@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: PaymentService-Docker
+  data:
+    mongodb:
+      uri: mongodb://mongo-payment:27017/payment_service
+      database: payment_service
+  liquibase:
+    change-log: classpath:db/changelog/changelog-master.json
+    enabled: true
+  kafka:
+    bootstrap-servers: kafka-1:9092,kafka-2:9092
+    consumer:
+      group-id: payment-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.innowise.paymentservice.dto.models.CreateOrderEventDto
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+logging:
+  level:
+    com.innowise.paymentservice: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
+
+random-number:
+  url: https://www.randomnumberapi.com/api/v1.0/random?min=1&max=100&count=1
+
+order-service:
+  url: ${ORDER_SERVICE_URL:http://order-service:8084}
+

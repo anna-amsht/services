@@ -1,7 +1,59 @@
 services:
+  kafka-1:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-1
+    networks:
+      - microservices-net
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  kafka-2:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka-2
+    networks:
+      - microservices-net
+    ports:
+      - "9094:9092"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    depends_on:
+      - kafka-1
+      - kafka-2
+    networks:
+      - microservices-net
+    ports:
+      - "8087:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-1:9092,kafka-2:9092
+
   postgres:
     image: postgres:16
     container_name: user_postgres
+    networks:
+      - microservices-net
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -14,6 +66,8 @@ services:
   postgres-auth:
     image: postgres:16
     container_name: auth_postgres
+    networks:
+      - microservices-net
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -26,6 +80,8 @@ services:
   postgres-order:
     image: postgres:16
     container_name: order_postgres
+    networks:
+      - microservices-net
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -35,9 +91,23 @@ services:
     volumes:
       - pgdata-order:/var/lib/postgresql/data
 
+
+  mongo-payment:
+    image: mongo:7.0
+    container_name: payment_mongo
+    networks:
+      - microservices-net
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata-payment:/data/db
+
+
   redis:
     image: redis:7
     container_name: user_redis
+    networks:
+      - microservices-net
     ports:
       - "6379:6379"
 
@@ -49,6 +119,8 @@ services:
     depends_on:
       - postgres
       - redis
+    networks:
+      - microservices-net
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
@@ -57,6 +129,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
     ports:
       - "8082:8082"
 
@@ -67,6 +140,8 @@ services:
     container_name: auth_service
     depends_on:
       - postgres-auth
+    networks:
+      - microservices-net
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_USERNAME: ${DB_USERNAME}
@@ -83,14 +158,38 @@ services:
     depends_on:
       - postgres-order
       - user-service
+      - kafka-1
+      - kafka-2
+    networks:
+      - microservices-net
     environment:
       SPRING_PROFILES_ACTIVE: docker
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: order_service
       USER_SERVICE_URL: http://user-service:8082
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
     ports:
       - "8084:8084"
+
+  payment-service:
+    build:
+      context: ./PaymentService
+      dockerfile: Dockerfile
+    container_name: payment_service
+    depends_on:
+      - mongo-payment
+      - order-service
+      - kafka-1
+      - kafka-2
+    networks:
+      - microservices-net
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      ORDER_SERVICE_URL: http://order-service:8084
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+    ports:
+      - "8086:8086"
 
   api-gateway:
     build:
@@ -101,12 +200,16 @@ services:
       - auth-service
       - user-service
       - order-service
+      - payment-service
+    networks:
+      - microservices-net
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JWT_SECRET: ${JWT_SECRET}
       AUTH_SERVICE_URL: http://auth-service:8083
       USER_SERVICE_URL: http://user-service:8082
       ORDER_SERVICE_URL: http://order-service:8084
+      PAYMENT_SERVICE_URL: http://payment-service:8086
     ports:
       - "8085:8085"
 
@@ -114,3 +217,8 @@ volumes:
   pgdata:
   pgdata-auth:
   pgdata-order:
+  mongodata-payment:
+
+networks:
+  microservices-net:
+    driver: bridge
