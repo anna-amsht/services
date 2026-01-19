@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-auth
+  name: auth-postgres
 spec:
   selector:
-    app: postgres-auth
+    app: auth-postgres
   ports:
     - name: postgres
       port: 5432
