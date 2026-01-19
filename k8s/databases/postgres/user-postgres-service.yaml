@@ -4,7 +4,7 @@ metadata:
   name: postgres
 spec:
   selector:
-    app: postgres-user
+    app: user-postgres
   ports:
     - name: postgres
       port: 5432
