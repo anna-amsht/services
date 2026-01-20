@@ -5,7 +5,7 @@ spring:
     name: AuthService
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://postgres-auth:5432/auth_user_info
+    url: jdbc:postgresql://auth-postgres:5432/auth_user_info
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
   jpa:
@@ -31,3 +31,12 @@ jwt:
   refresh:
     token:
       expiration: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

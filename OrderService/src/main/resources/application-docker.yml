@@ -41,3 +41,12 @@ user-service:
 internal:
   service:
     token: ${INTERNAL_SERVICE_TOKEN:internal-service-secret}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
